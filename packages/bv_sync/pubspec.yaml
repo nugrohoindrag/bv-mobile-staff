@@ -1,0 +1,30 @@
+name: bv_sync
+description: Offline-lite engine — drift schema, mutation queue, sync, photo pipeline
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.13.3
+  flutter: ">=3.47.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  bv_core:
+    path: ../bv_core
+  bv_api:
+    path: ../bv_api
+  drift: ^2.22.0
+  drift_flutter: ^0.3.1
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  uuid: ^4.5.1
+  crypto: ^3.0.6
+  flutter_image_compress: ^2.4.0
+  dio: ^5.7.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  drift_dev: ^2.22.0
+  sqlite3: ^3.6.0

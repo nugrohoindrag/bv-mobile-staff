@@ -1,0 +1,19 @@
+name: bv_api
+description: HTTP client BuildingVision (dio) + interceptor auth/refresh/device
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.13.3
+  flutter: ">=3.47.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  bv_core:
+    path: ../bv_core
+  dio: ^5.7.0
+  uuid: ^4.5.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

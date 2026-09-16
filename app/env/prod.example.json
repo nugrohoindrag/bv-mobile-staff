@@ -1,0 +1,5 @@
+{
+  "BV_FLAVOR": "prod",
+  "BV_API_URL": "https://api.buildingvision.id",
+  "BV_APP_LINK_HOST": "app.buildingvision.id"
+}

@@ -1,0 +1,40 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec_overrides.yaml
+coverage/
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+
+# Android
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/**/*.jks
+app/android/**/*.keystore
+app/android/app/google-services.json
+
+# iOS
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/ephemeral/
+app/ios/Runner/GoogleService-Info.plist
+
+# Env
+*.env
+app/env/*.json
+!app/env/*.example.json
+
+# catatan internal & artefak lokal
+PROGRESS.md
+*.log
+scratchpad/
+app/android/.gradle/

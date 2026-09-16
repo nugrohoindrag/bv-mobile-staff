@@ -1,0 +1,11 @@
+name: buildingvision_mobile_staff
+description: BuildingVision Staff App — Dart pub workspace (app + packages)
+publish_to: none
+environment:
+  sdk: ^3.13.3
+workspace:
+  - app
+  - packages/bv_core
+  - packages/bv_api
+  - packages/bv_sync
+  - packages/bv_ui
