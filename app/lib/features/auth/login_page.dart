@@ -74,12 +74,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: const BoxDecoration(color: BvTokens.brand500, shape: BoxShape.circle),
-                              child: const Icon(Icons.apartment, color: Colors.white),
-                            ),
+                            // Logo BuildingVision (mark "vision"; aset dari buildingvision/design-tokens/logo)
+                            Image.asset('assets/images/logo_mark.png', package: 'bv_ui', width: 64, fit: BoxFit.contain),
                             const SizedBox(width: 12),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
