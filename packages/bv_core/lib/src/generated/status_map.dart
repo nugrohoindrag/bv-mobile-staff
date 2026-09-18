@@ -55,6 +55,22 @@ const Map<String, Map<String, StatusDef>> statusMap = {
     'rejected': StatusDef('Ditolak', 'Rejected', 'critical', 'soft'),
     'no_show': StatusDef('Tidak Hadir', 'No Show', 'critical', 'outline'),
   },
+  'bvrooms_booking_customer': {
+    'UNPAID': StatusDef('Belum Dibayar', 'Unpaid', 'critical', 'solid'),
+    'PAID': StatusDef('Sudah Dibayar', 'Paid', 'success', 'solid'),
+    'CHECK IN': StatusDef('Check In', 'Checked In', 'warning', 'solid'),
+    'CHECK OUT': StatusDef('Check Out', 'Checked Out', 'neutral', 'solid'),
+    'CANCELLED': StatusDef('Dibatalkan', 'Cancelled', 'neutral', 'solid'),
+    'EXPIRED': StatusDef('Hangus', 'Expired', 'neutral', 'outline'),
+  },
+  'bvrooms_payment': {
+    'pending': StatusDef('Menunggu Pembayaran', 'Pending', 'warning', 'soft'),
+    'proof_submitted': StatusDef('Bukti Diverifikasi', 'Proof Submitted', 'info', 'soft'),
+    'paid': StatusDef('Lunas', 'Paid', 'success', 'soft'),
+    'expired': StatusDef('Kedaluwarsa', 'Expired', 'neutral', 'outline'),
+    'failed': StatusDef('Ditolak', 'Rejected', 'critical', 'soft'),
+    'cancelled': StatusDef('Dibatalkan', 'Cancelled', 'neutral', 'outline'),
+  },
   'visitor': {
     'pending_approval': StatusDef('Menunggu Persetujuan', 'Pending Approval', 'warning', 'soft'),
     'registered': StatusDef('Terdaftar', 'Registered', 'info', 'soft'),

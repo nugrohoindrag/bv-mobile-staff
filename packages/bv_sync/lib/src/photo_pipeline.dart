@@ -19,23 +19,32 @@ abstract class ImageProcessor {
   Future<ProcessedImage> process(Uint8List input);
 }
 
-/// Implementasi produksi (flutter_image_compress) — TAD §8.5.
+/// Batas ukuran foto yang diterima server (`BV_MAX_IMAGE_BYTES`, default 500 KB) — sync `attach_photo`
+/// dan presign menolak `size_bytes` di atas ini, jadi kompresi di perangkat wajib.
+const int kMaxImageBytes = 500 * 1024;
+
+/// Implementasi produksi (flutter_image_compress) — TAD §8.5. Kompres sampai ≤ [maxBytes]:
+/// sisi ≤ [maxSide] & q80 dulu, lalu kualitas turun bertahap (→40), lalu sisi diperkecil 0.8× berulang.
 class FlutterImageProcessor implements ImageProcessor {
-  const FlutterImageProcessor({this.maxSide = 1600, this.quality = 80});
+  const FlutterImageProcessor({this.maxSide = 1600, this.quality = 80, this.maxBytes = kMaxImageBytes});
   final int maxSide;
   final int quality;
+  final int maxBytes;
 
   @override
   Future<ProcessedImage> process(Uint8List input) async {
-    final out = await FlutterImageCompress.compressWithList(
-      input,
-      minWidth: maxSide,
-      minHeight: maxSide,
-      quality: quality,
-      format: CompressFormat.jpeg,
-      autoCorrectionAngle: true,
-      keepExif: false,
-    );
+    var side = maxSide;
+    var q = quality;
+    Uint8List out = input;
+    for (var i = 0; i < 12; i++) {
+      out = await FlutterImageCompress.compressWithList(input, minWidth: side, minHeight: side, quality: q, format: CompressFormat.jpeg, autoCorrectionAngle: true, keepExif: false);
+      if (out.length <= maxBytes) break;
+      if (q > 40) {
+        q -= 10;
+      } else {
+        side = (side * 0.8).round();
+      }
+    }
     return ProcessedImage(out);
   }
 }
@@ -73,16 +82,7 @@ class PhotoStore {
 
 /// Foto siap antre (hasil capture + GPS paralel, PRD §22).
 class CapturedPhoto {
-  const CapturedPhoto({
-    required this.bytes,
-    required this.capturedAt,
-    this.gpsLat,
-    this.gpsLng,
-    this.gpsStatus = 'unavailable',
-    this.caption,
-    this.width,
-    this.height,
-  });
+  const CapturedPhoto({required this.bytes, required this.capturedAt, this.gpsLat, this.gpsLng, this.gpsStatus = 'unavailable', this.caption, this.width, this.height});
   final Uint8List bytes;
   final DateTime capturedAt;
   final double? gpsLat;

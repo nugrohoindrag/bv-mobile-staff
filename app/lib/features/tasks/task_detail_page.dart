@@ -118,7 +118,12 @@ class _DetailState extends ConsumerState<_Detail> {
     } else if (isSup && item.can(WorkAction.close)) {
       cta = BvPrimaryButton(label: '${s.verify} & ${s.close}', icon: Icons.verified_outlined, loading: _busy, onPressed: () => _run(() => actions.close(item)));
     } else if (isSup && item.can(WorkAction.assign)) {
-      cta = BvPrimaryButton(label: item.assignee.userId == null ? 'Tugaskan Pekerjaan' : 'Alihkan Pekerjaan', icon: Icons.person_add_alt_outlined, loading: _busy, onPressed: () => _run(() => actions.assign(item)));
+      cta = BvPrimaryButton(
+        label: item.assignee.userId == null ? 'Tugaskan Pekerjaan' : 'Alihkan Pekerjaan',
+        icon: Icons.person_add_alt_outlined,
+        loading: _busy,
+        onPressed: () => _run(() => actions.assign(item)),
+      );
     }
 
     return Scaffold(
@@ -148,14 +153,45 @@ class _DetailState extends ConsumerState<_Detail> {
               }
             },
             itemBuilder: (_) => [
-              if (item.can(WorkAction.hold)) PopupMenuItem(value: 'hold', child: ListTile(leading: const Icon(Icons.pause_circle_outline), title: Text(s.hold))),
-              if (session.can(Perm.findingsCreate)) PopupMenuItem(value: 'finding', child: ListTile(leading: const Icon(Icons.flag_outlined), title: Text(s.addFinding))),
-              if (session.can(Perm.incidentsCreate) && !item.isWorkOrder) PopupMenuItem(value: 'incident', child: ListTile(leading: const Icon(Icons.report_gmailerrorred_outlined), title: Text(s.reportIncident))),
-              if (session.can(Perm.workOrdersCreate)) PopupMenuItem(value: 'wo', child: ListTile(leading: const Icon(Icons.build_outlined), title: Text(s.createWorkOrder))),
-              if (isSup && item.can(WorkAction.assign) && cta != null) PopupMenuItem(value: 'assign', child: ListTile(leading: const Icon(Icons.person_add_alt_outlined), title: Text(s.reassign))),
-              if (isSup && item.can(WorkAction.reopen)) const PopupMenuItem(value: 'reopen', child: ListTile(leading: Icon(Icons.replay), title: Text('Buka kembali'))),
-              if (isSup && item.can(WorkAction.cancel)) const PopupMenuItem(value: 'cancel', child: ListTile(leading: Icon(Icons.cancel_outlined), title: Text('Batalkan'))),
-              PopupMenuItem(value: 'sync', child: ListTile(leading: const Icon(Icons.sync), title: Text(s.syncNow))),
+              if (item.can(WorkAction.hold))
+                PopupMenuItem(
+                  value: 'hold',
+                  child: ListTile(leading: const Icon(Icons.pause_circle_outline), title: Text(s.hold)),
+                ),
+              if (session.can(Perm.findingsCreate))
+                PopupMenuItem(
+                  value: 'finding',
+                  child: ListTile(leading: const Icon(Icons.flag_outlined), title: Text(s.addFinding)),
+                ),
+              if (session.can(Perm.incidentsCreate) && !item.isWorkOrder)
+                PopupMenuItem(
+                  value: 'incident',
+                  child: ListTile(leading: const Icon(Icons.report_gmailerrorred_outlined), title: Text(s.reportIncident)),
+                ),
+              if (session.can(Perm.workOrdersCreate))
+                PopupMenuItem(
+                  value: 'wo',
+                  child: ListTile(leading: const Icon(Icons.build_outlined), title: Text(s.createWorkOrder)),
+                ),
+              if (isSup && item.can(WorkAction.assign) && cta != null)
+                PopupMenuItem(
+                  value: 'assign',
+                  child: ListTile(leading: const Icon(Icons.person_add_alt_outlined), title: Text(s.reassign)),
+                ),
+              if (isSup && item.can(WorkAction.reopen))
+                const PopupMenuItem(
+                  value: 'reopen',
+                  child: ListTile(leading: Icon(Icons.replay), title: Text('Buka kembali')),
+                ),
+              if (isSup && item.can(WorkAction.cancel))
+                const PopupMenuItem(
+                  value: 'cancel',
+                  child: ListTile(leading: Icon(Icons.cancel_outlined), title: Text('Batalkan')),
+                ),
+              PopupMenuItem(
+                value: 'sync',
+                child: ListTile(leading: const Icon(Icons.sync), title: Text(s.syncNow)),
+              ),
             ],
           ),
         ],
@@ -169,26 +205,52 @@ class _DetailState extends ConsumerState<_Detail> {
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
             child: Column(
               children: [
-                KindIcon(item.isWorkOrder ? 'work_order' : item.isCleaning ? 'cleaning' : item.isPatrol ? 'patrol' : item.isInspection ? 'inspection' : 'task', size: 120),
+                KindIcon(
+                  item.isWorkOrder
+                      ? 'work_order'
+                      : item.isCleaning
+                      ? 'cleaning'
+                      : item.isPatrol
+                      ? 'patrol'
+                      : item.isInspection
+                      ? 'inspection'
+                      : 'task',
+                  size: 120,
+                ),
                 const SizedBox(height: 18),
-                Text(item.title.toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: BvTokens.neutral900)),
+                Text(
+                  item.title.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: BvTokens.neutral900),
+                ),
                 const SizedBox(height: 4),
-                Text(item.number, style: const TextStyle(color: BvTokens.neutral400, fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(
+                  item.number,
+                  style: const TextStyle(color: BvTokens.neutral400, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 12),
                 _StatusPill(objectType: item.objectType, status: item.status),
                 if (item.isOverdue || item.flags.isNotEmpty || item.evidenceIncomplete) ...[
                   const SizedBox(height: 10),
-                  Wrap(spacing: 6, runSpacing: 6, alignment: WrapAlignment.center, children: [
-                    if (item.isOverdue) const FlagBadge('overdue'),
-                    for (final f in item.flags.where((f) => f != 'overdue')) FlagBadge(f),
-                    if (item.evidenceIncomplete) const FlagBadge('evidence_incomplete'),
-                  ]),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      if (item.isOverdue) const FlagBadge('overdue'),
+                      for (final f in item.flags.where((f) => f != 'overdue')) FlagBadge(f),
+                      if (item.evidenceIncomplete) const FlagBadge('evidence_incomplete'),
+                    ],
+                  ),
                 ],
               ],
             ),
           ),
           const SizedBox(height: 4),
-          Padding(padding: const EdgeInsets.only(top: 12), child: SyncStatusCard(objectId: item.id)),
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: SyncStatusCard(objectId: item.id),
+          ),
 
           // ---- Detail Pengerjaan ----
           const CenteredSectionTitle('Detail Pengerjaan'),
@@ -210,9 +272,19 @@ class _DetailState extends ConsumerState<_Detail> {
                 if (item.startedAt != null) IconInfoRow(icon: Icons.play_circle_outline, label: 'Dimulai', value: BvFormat.dateTime(item.startedAt)),
                 if (item.completedAt != null) IconInfoRow(icon: Icons.check_circle_outline, label: 'Selesai', value: BvFormat.dateTime(item.completedAt)),
                 if (item.requiresEvidence) const IconInfoRow(icon: Icons.photo_camera_outlined, label: 'Evidence', value: 'Wajib foto'),
-                if (item.vendorName != null) IconInfoRow(icon: Icons.handshake_outlined, label: 'Vendor', value: item.vendorNotes == null || item.vendorNotes!.isEmpty ? item.vendorName! : '${item.vendorName!} · ${item.vendorNotes!}'),
+                if (item.vendorName != null)
+                  IconInfoRow(
+                    icon: Icons.handshake_outlined,
+                    label: 'Vendor',
+                    value: item.vendorNotes == null || item.vendorNotes!.isEmpty ? item.vendorName! : '${item.vendorName!} · ${item.vendorNotes!}',
+                  ),
                 if (item.vendorReference != null && item.vendorReference!.isNotEmpty) IconInfoRow(icon: Icons.receipt_long_outlined, label: 'Referensi vendor', value: item.vendorReference!),
-                if (item.isWorkOrder && item.actualCost != null && item.actualCost!.amount > 0) IconInfoRow(icon: Icons.payments_outlined, label: 'Biaya aktual', value: BvFormat.money(item.actualCost!.amount, currency: item.actualCost!.currencyCode)),
+                if (item.isWorkOrder && item.actualCost != null && item.actualCost!.amount > 0)
+                  IconInfoRow(
+                    icon: Icons.payments_outlined,
+                    label: 'Biaya aktual',
+                    value: BvFormat.money(item.actualCost!.amount, currency: item.actualCost!.currencyCode),
+                  ),
               ],
             ),
           ),
@@ -234,30 +306,51 @@ class _DetailState extends ConsumerState<_Detail> {
                         scrollDirection: Axis.horizontal,
                         children: [
                           for (final p in pending)
-                            Padding(padding: const EdgeInsets.only(right: 12), child: ClipRRect(borderRadius: BorderRadius.circular(12), child: SizedBox(width: 170, child: PhotoSource(localPath: p.localPath).image()))),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: SizedBox(width: 170, child: PhotoSource(localPath: p.localPath).image()),
+                              ),
+                            ),
                           for (final a in photos)
-                            Padding(padding: const EdgeInsets.only(right: 12), child: ClipRRect(borderRadius: BorderRadius.circular(12), child: SizedBox(width: 170, child: PhotoSource(url: a.thumbUrl ?? a.url).image()))),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: SizedBox(width: 170, child: PhotoSource(url: a.thumbUrl ?? a.url).image()),
+                              ),
+                            ),
                         ],
                       ),
                     )
                   else if (item.isOpen && session.can(Perm.attachmentsCreate))
                     Padding(
                       padding: const EdgeInsets.only(right: 16),
-                      child: Row(children: [
-                        CameraBox(onTap: _busy ? null : () => _run(() => actions.addPhoto(item, type: AttachmentType.before)), size: 56),
-                        const SizedBox(width: 12),
-                        const Expanded(child: Text('Belum ada foto. Tambahkan foto kondisi sebelum pengerjaan.', style: TextStyle(color: BvTokens.neutral500, fontSize: 13))),
-                      ]),
+                      child: Row(
+                        children: [
+                          CameraBox(onTap: _busy ? null : () => _run(() => actions.addPhoto(item, type: AttachmentType.before)), size: 56),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text('Belum ada foto. Tambahkan foto kondisi sebelum pengerjaan.', style: TextStyle(color: BvTokens.neutral500, fontSize: 13)),
+                          ),
+                        ],
+                      ),
                     ),
                   const SizedBox(height: 14),
-                  Row(children: [
-                    BvAvatar(name: item.createdByName ?? item.assignee.userName ?? '?', size: 34, border: false),
-                    const SizedBox(width: 10),
-                    Text(item.createdByName ?? '—', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                  ]),
+                  Row(
+                    children: [
+                      BvAvatar(name: item.createdByName ?? item.assignee.userName ?? '?', size: 34, border: false),
+                      const SizedBox(width: 10),
+                      Text(item.createdByName ?? '—', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                    ],
+                  ),
                   if (item.description != null && item.description!.isNotEmpty) ...[
                     const SizedBox(height: 10),
-                    Padding(padding: const EdgeInsets.only(right: 16), child: Text(item.description!, style: const TextStyle(fontSize: 14, color: BvTokens.neutral800, height: 1.45))),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Text(item.description!, style: const TextStyle(fontSize: 14, color: BvTokens.neutral800, height: 1.45)),
+                    ),
                   ],
                 ],
               ),
@@ -283,7 +376,11 @@ class _DetailState extends ConsumerState<_Detail> {
                   ListTile(
                     leading: const Icon(Icons.inventory_2_outlined, color: BvTokens.brand500),
                     title: const Text('Parts Usage', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(item.partsUsage == null || item.partsUsage!.isEmpty ? 'Spare part yang dipakai (stok berkurang otomatis)' : item.partsUsage!, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                      item.partsUsage == null || item.partsUsage!.isEmpty ? 'Spare part yang dipakai (stok berkurang otomatis)' : item.partsUsage!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('$base/${item.id}/parts'),
                   ),
@@ -323,7 +420,8 @@ class _DetailState extends ConsumerState<_Detail> {
               children: [
                 if (item.assignee.userName != null) _MemberRow(name: item.assignee.userName!, subtitle: item.assignee.teamName),
                 if (members != null)
-                  for (final m in members.where((m) => m.userId != item.assignee.userId)) _MemberRow(name: m.fullName, subtitle: m.isLead ? 'Lead · ${item.assignee.teamName ?? ''}' : item.assignee.teamName),
+                  for (final m in members.where((m) => m.userId != item.assignee.userId))
+                    _MemberRow(name: m.fullName, subtitle: m.isLead ? 'Lead · ${item.assignee.teamName ?? ''}' : item.assignee.teamName),
                 if (item.assignee.userName == null && (members == null || members.isEmpty))
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -350,11 +448,18 @@ class _StatusPill extends StatelessWidget {
     final def = statusDefOf(objectType, status);
     final sem = def == null ? Semantic.neutral : semanticOf(def.semantic);
     final p = SemanticPalette.of(sem);
-    final solid = status == 'new' || status == 'assigned' || status == 'scheduled' ? BvTokens.critical600 : status == 'in_progress' ? BvTokens.success600 : p.solid;
+    final solid = status == 'new' || status == 'assigned' || status == 'scheduled'
+        ? BvTokens.critical600
+        : status == 'in_progress'
+        ? BvTokens.success600
+        : p.solid;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
       decoration: BoxDecoration(color: solid, borderRadius: BorderRadius.circular(BvTokens.radiusFull)),
-      child: Text(statusLabel(objectType, status), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+      child: Text(
+        statusLabel(objectType, status),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+      ),
     );
   }
 }
@@ -365,9 +470,9 @@ class _MemberRow extends StatelessWidget {
   final String? subtitle;
   @override
   Widget build(BuildContext context) => ListTile(
-        leading: BvAvatar(name: name, size: 44, border: false),
-        title: Text(name, style: const TextStyle(fontSize: 16)),
-        subtitle: subtitle == null ? null : Text(subtitle!),
-        dense: true,
-      );
+    leading: BvAvatar(name: name, size: 44, border: false),
+    title: Text(name, style: const TextStyle(fontSize: 16)),
+    subtitle: subtitle == null ? null : Text(subtitle!),
+    dense: true,
+  );
 }

@@ -32,12 +32,7 @@ class Bootstrap {
     final info = await PackageInfo.fromPlatform();
     final prefs = await SharedPreferences.getInstance();
     final support = await getApplicationSupportDirectory();
-    return Bootstrap(
-      deviceId: deviceId,
-      appVersion: info.version,
-      prefs: prefs,
-      photoDir: Directory('${support.path}/photos'),
-    );
+    return Bootstrap(deviceId: deviceId, appVersion: info.version, prefs: prefs, photoDir: Directory('${support.path}/photos'));
   }
 }
 
@@ -120,11 +115,7 @@ final databaseProvider = Provider<BvDatabase>((ref) {
 
 final localRepoProvider = Provider<LocalWorkRepository>((ref) {
   final b = ref.watch(bootstrapProvider);
-  return LocalWorkRepository(
-    ref.watch(databaseProvider),
-    imageProcessor: const FlutterImageProcessor(),
-    photoStore: PhotoStore(b.photoDir),
-  );
+  return LocalWorkRepository(ref.watch(databaseProvider), imageProcessor: const FlutterImageProcessor(), photoStore: PhotoStore(b.photoDir));
 });
 
 final syncEngineProvider = Provider<SyncEngine>((ref) {
@@ -133,6 +124,26 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     repo: ref.watch(localRepoProvider),
     syncApi: ref.watch(syncApiProvider),
     attachmentsApi: ref.watch(attachmentsApiProvider),
+    // Setelah mutasi diterima server: segarkan detail + checklist run object tsb dari server
+    // (allowed_actions/status/attachment_id terbaru) tanpa menunggu pull bundle 15 menit.
+    onApplied: (objects) async {
+      final work = ref.read(workApiProvider);
+      final repo = ref.read(localRepoProvider);
+      for (final o in objects) {
+        if (o.objectType != ObjectType.task && o.objectType != ObjectType.workOrder) continue;
+        try {
+          final fresh = await work.get(o.objectType, o.objectId);
+          await repo.saveWorkItem(fresh);
+          final runs = await work.checklistRuns(o.objectType, o.objectId);
+          for (final r in runs) {
+            await repo.saveRun(r);
+          }
+          await repo.refreshSyncState(o.objectId);
+        } on AppError catch (e) {
+          if (e.isNetwork) return;
+        }
+      }
+    },
   );
   ref.onDispose(engine.dispose);
   return engine;

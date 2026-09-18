@@ -40,18 +40,27 @@ class LocalOverlay {
       completionNotes: completionNotes,
       attachmentCount: attachments,
       commentCount: comments,
-      // aksi berikutnya mengikuti status lokal; server yang memutuskan saat sync
-      allowedActions: _allowedFor(status, item),
+      // aksi berikutnya mengikuti status lokal; server yang memutuskan saat sync.
+      // Bila status tidak berubah (hanya foto/komentar pending), allowed_actions server tetap dipakai —
+      // sebelumnya dihitung ulang sehingga tombol Mulai/Tugaskan/Verifikasi hilang setelah tambah foto.
+      allowedActions: status == item.status ? item.allowedActions : _allowedFor(status, item),
     );
   }
 
-  /// Aksi worker yang masuk akal dari status lokal (subset workflow.go; tanpa assign/close/cancel).
-  static List<String> _allowedFor(String status, WorkItem item) => switch (status) {
-        'assigned' || 'scheduled' => const [WorkAction.start],
-        'in_progress' => const [WorkAction.hold, WorkAction.complete],
-        'on_hold' => const [WorkAction.resume],
-        _ => const [],
-      };
+  /// Aksi worker yang masuk akal dari status lokal (subset workflow.go). Aksi non-transisi
+  /// (`comment`, `attach`, `update`, `view`) dipertahankan dari server.
+  static List<String> allowedForStatus(String status, WorkItem item) => _allowedFor(status, item);
+
+  static List<String> _allowedFor(String status, WorkItem item) {
+    final transitions = switch (status) {
+      'assigned' || 'scheduled' => const [WorkAction.start],
+      'in_progress' => const [WorkAction.hold, WorkAction.complete],
+      'on_hold' => const [WorkAction.resume],
+      _ => const <String>[],
+    };
+    final keep = item.allowedActions.where((a) => !WorkAction.transitions.contains(a) && a != WorkAction.assign);
+    return [...transitions, ...keep];
+  }
 
   /// Jawaban checklist pending diterapkan ke run (C7: jawaban terbaru menang).
   static ChecklistRun applyToRun(ChecklistRun run, Iterable<Mutation> pending) {

@@ -38,8 +38,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     final tabs = widget.checklistMode
         ? const [('all', 'Semua'), ('todo', 'Belum'), ('done', 'Selesai')]
         : isHk
-            ? const [('all', 'Semua'), ('cleaning', 'Cleaning'), ('task', 'Task'), ('done', 'Selesai')]
-            : const [('all', 'Semua'), ('task', 'Task'), ('wo', 'Work Order'), ('pm', 'Preventive'), ('done', 'Selesai')];
+        ? const [('all', 'Semua'), ('cleaning', 'Cleaning'), ('task', 'Task'), ('done', 'Selesai')]
+        : const [('all', 'Semua'), ('task', 'Task'), ('wo', 'Work Order'), ('pm', 'Preventive'), ('done', 'Selesai')];
 
     List<WorkItem> filter(List<WorkItem> all) {
       Iterable<WorkItem> it = all;
@@ -55,71 +55,87 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       };
       if (_q.isNotEmpty) {
         final q = _q.toLowerCase();
-        it = it.where((i) => i.title.toLowerCase().contains(q) || i.number.toLowerCase().contains(q) || (i.location.pathText?.toLowerCase().contains(q) ?? false) || (i.asset.name?.toLowerCase().contains(q) ?? false));
+        it = it.where(
+          (i) =>
+              i.title.toLowerCase().contains(q) ||
+              i.number.toLowerCase().contains(q) ||
+              (i.location.pathText?.toLowerCase().contains(q) ?? false) ||
+              (i.asset.name?.toLowerCase().contains(q) ?? false),
+        );
       }
       return it.toList();
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.checklistMode ? 'Checklist Hari Ini' : isHk ? 'Cleaning & Task' : 'Tasks & Work Orders'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(96),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: TextField(
-                  onChanged: (v) => setState(() => _q = v),
-                  decoration: const InputDecoration(hintText: 'Cari nomor, judul, lokasi, aset', prefixIcon: Icon(Icons.search), isDense: true),
-                ),
-              ),
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    for (final (key, label) in tabs)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ChoiceChip(
-                          label: Text(label),
-                          selected: _tab == key,
-                          selectedColor: BvTokens.brand100,
-                          onSelected: (_) => setState(() => _tab = key),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
+        title: Text(
+          widget.checklistMode
+              ? 'Checklist Hari Ini'
+              : isHk
+              ? 'Cleaning & Task'
+              : 'Tasks & Work Orders',
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(syncControllerProvider.notifier).trigger(force: true),
-        child: items.when(
-          loading: () => const LoadingState(),
-          error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(localWorkItemsProvider)),
-          data: (all) {
-            final list = filter(all);
-            if (list.isEmpty) {
-              return ListView(children: [EmptyState(title: 'Tidak ada pekerjaan', message: 'Tidak ada item untuk filter ini.', icon: Icons.inbox_outlined)]);
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: list.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (_, i) {
-                final item = list[i];
-                if (!widget.checklistMode) return WorkItemTile(item: item);
-                return _ChecklistTile(item: item);
-              },
-            );
-          },
-        ),
+      // Pencarian + chip filter di body (bukan `AppBar.bottom` dengan tinggi tetap 96 yang lebih kecil dari
+      // isinya → overflow/terpotong di font besar).
+      body: Column(
+        children: [
+          Material(
+            color: Theme.of(context).appBarTheme.backgroundColor ?? Colors.white,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                  child: TextField(
+                    onChanged: (v) => setState(() => _q = v),
+                    decoration: const InputDecoration(hintText: 'Cari nomor, judul, lokasi, aset', prefixIcon: Icon(Icons.search), isDense: true),
+                  ),
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  child: Row(
+                    children: [
+                      for (final (key, label) in tabs)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: ChoiceChip(label: Text(label), selected: _tab == key, selectedColor: BvTokens.brand100, onSelected: (_) => setState(() => _tab = key)),
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+              ],
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => ref.read(syncControllerProvider.notifier).trigger(force: true),
+              child: items.when(
+                loading: () => const LoadingState(),
+                error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(localWorkItemsProvider)),
+                data: (all) {
+                  final list = filter(all);
+                  if (list.isEmpty) {
+                    return ListView(
+                      children: [EmptyState(title: 'Tidak ada pekerjaan', message: 'Tidak ada item untuk filter ini.', icon: Icons.inbox_outlined)],
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: list.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) {
+                      final item = list[i];
+                      if (!widget.checklistMode) return WorkItemTile(item: item);
+                      return _ChecklistTile(item: item);
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

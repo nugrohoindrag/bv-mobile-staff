@@ -51,12 +51,15 @@ class SyncState {
   static const conflict = 'conflict';
 }
 
+/// Nilai kolom `attachments.attachment_type` di server (CHECK constraint migrasi 00004).
+/// Alias pendek `before|after|checklist` di sync-api.md dinormalisasi server, tetapi kirim nilai
+/// kanonik agar cocok dengan `Attachment.attachmentType` yang dikembalikan API.
 class AttachmentType {
   AttachmentType._();
-  static const before = 'before';
-  static const after = 'after';
+  static const before = 'photo_before';
+  static const after = 'photo_after';
   static const photo = 'photo';
-  static const checklist = 'checklist';
+  static const checklist = 'checklist_item_photo';
 }
 
 class ScanMethod {

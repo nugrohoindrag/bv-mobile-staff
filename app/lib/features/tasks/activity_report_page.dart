@@ -40,7 +40,12 @@ class _ActivityReportPageState extends ConsumerState<ActivityReportPage> {
     try {
       final repo = ref.read(localRepoProvider);
       for (final p in _photos) {
-        await repo.attachPhoto(widget.objectType, widget.objectId, CapturedPhoto(bytes: p.bytes, capturedAt: p.capturedAt, gpsLat: p.gpsLat, gpsLng: p.gpsLng, gpsStatus: p.gpsStatus, caption: body.isEmpty ? null : body), attachmentType: AttachmentType.photo);
+        await repo.attachPhoto(
+          widget.objectType,
+          widget.objectId,
+          CapturedPhoto(bytes: p.bytes, capturedAt: p.capturedAt, gpsLat: p.gpsLat, gpsLng: p.gpsLng, gpsStatus: p.gpsStatus, caption: body.isEmpty ? null : body),
+          attachmentType: AttachmentType.photo,
+        );
       }
       if (body.isNotEmpty) await repo.addComment(widget.objectType, widget.objectId, body);
       ref.read(syncControllerProvider.notifier).afterMutation();
@@ -106,7 +111,14 @@ class _ActivityReportPageState extends ConsumerState<ActivityReportPage> {
             if (!comments.isLoading && entries.isEmpty) const EmptyState(title: 'Belum ada activity report', message: 'Laporan kegiatan dan foto akan tampil di sini.', icon: Icons.article_outlined),
             for (final e in entries) ...[_ReportCard(entry: e), const SizedBox(height: 16)],
             if (comments.hasError && comments.error is AppError && (comments.error! as AppError).isNetwork)
-              const Padding(padding: EdgeInsets.all(8), child: Text('Offline — laporan dari server dimuat saat online.', textAlign: TextAlign.center, style: TextStyle(color: BvTokens.neutral500, fontSize: 12))),
+              const Padding(
+                padding: EdgeInsets.all(8),
+                child: Text(
+                  'Offline — laporan dari server dimuat saat online.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: BvTokens.neutral500, fontSize: 12),
+                ),
+              ),
           ],
         ),
       ),
@@ -114,60 +126,78 @@ class _ActivityReportPageState extends ConsumerState<ActivityReportPage> {
   }
 
   Widget _compose() => Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(BvTokens.radiusXl), boxShadow: bvCardShadow),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
-              child: Row(children: [
-                const Expanded(child: Text('Tambah Activity Report', style: TextStyle(color: BvTokens.neutral500, fontSize: 17, fontWeight: FontWeight.w600))),
-                IconButton(icon: Icon(_composeOpen ? Icons.close : Icons.expand_more, color: BvTokens.neutral500), onPressed: () => setState(() => _composeOpen = !_composeOpen)),
-              ]),
-            ),
-            const Divider(height: 1),
-            if (_composeOpen)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: _text,
-                      maxLines: null,
-                      minLines: 3,
-                      decoration: const InputDecoration(hintText: 'Tulis kegiatan / kendala yang terjadi…', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none, filled: false, contentPadding: EdgeInsets.zero),
-                      style: const TextStyle(fontSize: 15.5, height: 1.4),
-                    ),
-                    if (_photos.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      PhotoThumbnailRow(
-                        photos: [for (final p in _photos) PhotoThumb(bytes: p.bytes)],
-                        onRemove: (t) => setState(() => _photos.removeWhere((p) => p.bytes == t.bytes)),
-                        size: 64,
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        CameraBox(
-                          onTap: _posting
-                              ? null
-                              : () async {
-                                  final p = await const PhotoCapture().pick(context);
-                                  if (p != null) setState(() => _photos.add(p));
-                                },
-                        ),
-                        const Spacer(),
-                        SaveButton(label: 'Post', width: 150, loading: _posting, onPressed: _text.text.trim().isEmpty && _photos.isEmpty ? null : _post),
-                      ],
-                    ),
-                  ],
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(BvTokens.radiusXl), boxShadow: bvCardShadow),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Tambah Activity Report',
+                  style: TextStyle(color: BvTokens.neutral500, fontSize: 17, fontWeight: FontWeight.w600),
                 ),
               ),
-          ],
+              IconButton(
+                icon: Icon(_composeOpen ? Icons.close : Icons.expand_more, color: BvTokens.neutral500),
+                onPressed: () => setState(() => _composeOpen = !_composeOpen),
+              ),
+            ],
+          ),
         ),
-      );
+        const Divider(height: 1),
+        if (_composeOpen)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _text,
+                  maxLines: null,
+                  minLines: 3,
+                  onChanged: (_) => setState(() {}), // aktifkan tombol Post saat mengetik
+                  decoration: const InputDecoration(
+                    hintText: 'Tulis kegiatan / kendala yang terjadi…',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  style: const TextStyle(fontSize: 15.5, height: 1.4),
+                ),
+                if (_photos.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  PhotoThumbnailRow(
+                    photos: [for (final p in _photos) PhotoThumb(bytes: p.bytes)],
+                    onRemove: (t) => setState(() => _photos.removeWhere((p) => p.bytes == t.bytes)),
+                    size: 64,
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    CameraBox(
+                      onTap: _posting
+                          ? null
+                          : () async {
+                              final p = await const PhotoCapture().pick(context);
+                              if (p != null) setState(() => _photos.add(p));
+                            },
+                    ),
+                    const Spacer(),
+                    SaveButton(label: 'Post', width: 150, loading: _posting, onPressed: _text.text.trim().isEmpty && _photos.isEmpty ? null : _post),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _Entry {
@@ -185,36 +215,38 @@ class _ReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(BvTokens.radiusXl), boxShadow: bvCardShadow),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (entry.photos.isNotEmpty) PhotoCarousel(sources: entry.photos, height: 240, radius: 0),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(BvTokens.radiusXl), boxShadow: bvCardShadow),
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (entry.photos.isNotEmpty) PhotoCarousel(sources: entry.photos, height: 240, radius: 0),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(children: [
-                    BvAvatar(name: entry.author, size: 52, border: false),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  BvAvatar(name: entry.author, size: 52, border: false),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(entry.author, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
                         Text(BvFormat.timeDayDate(entry.at), style: const TextStyle(color: BvTokens.neutral500, fontSize: 13)),
-                      ]),
+                      ],
                     ),
-                    if (entry.pending) const SyncBadge(SyncState.pending),
-                  ]),
-                  if (entry.text.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(entry.text, style: const TextStyle(fontSize: 15, height: 1.45, color: BvTokens.neutral800)),
-                  ],
+                  ),
+                  if (entry.pending) const SyncBadge(SyncState.pending),
                 ],
               ),
-            ),
-          ],
+              if (entry.text.isNotEmpty) ...[const SizedBox(height: 12), Text(entry.text, style: const TextStyle(fontSize: 15, height: 1.45, color: BvTokens.neutral800))],
+            ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }

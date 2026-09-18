@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/session.dart';
 import '../../app/sync_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/dialogs.dart';
@@ -39,14 +40,34 @@ class _ChecklistRunnerPageState extends ConsumerState<ChecklistRunnerPage> {
   final _drafts = <String, _Draft>{};
   bool _completing = false;
 
+  Future<void> _run(Future<bool> Function() f, {bool popOnSuccess = false}) async {
+    setState(() => _completing = true);
+    try {
+      final ok = await f();
+      if (ok && popOnSuccess && mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _completing = false);
+    }
+  }
+
+  /// Server hanya menerima jawaban saat status In Progress (assignee) — supervisor `manage` boleh kapan saja
+  /// selama masih terbuka. Tanpa gate ini jawaban offline ditolak server (WORKFLOW_GUARD_FAILED "Start dulu").
+  bool _editable(WorkItem? item, Session session) {
+    if (item == null) return false;
+    if (item.isInProgress) return true;
+    return session.isSupervisor && item.isOpen;
+  }
+
   _Draft _draft(ChecklistRunItem it) => _drafts.putIfAbsent(it.id, () {
-        final d = _Draft();
-        d.value = it.resultValue;
-        d.number = it.resultNumber?.toString();
-        d.text = it.resultText;
-        d.note = it.note;
-        return d;
-      });
+    final d = _Draft();
+    d.value = it.resultValue;
+    d.number = it.resultNumber?.toString();
+    d.text = it.resultText;
+    d.note = it.note;
+    return d;
+  });
 
   Future<void> _save(ChecklistRun run, ChecklistRunItem it) async {
     final d = _draft(it);
@@ -54,7 +75,9 @@ class _ChecklistRunnerPageState extends ConsumerState<ChecklistRunnerPage> {
     try {
       final num = d.number == null || d.number!.isEmpty ? null : double.tryParse(d.number!.replaceAll(',', '.'));
       final notOk = d.value == 'not_ok' || d.value == 'no' || (num != null && ((it.numericMin != null && num < it.numericMin!) || (it.numericMax != null && num > it.numericMax!)));
-      await ref.read(localRepoProvider).answerChecklist(
+      await ref
+          .read(localRepoProvider)
+          .answerChecklist(
             run,
             it,
             AnswerInput(
@@ -88,6 +111,33 @@ class _ChecklistRunnerPageState extends ConsumerState<ChecklistRunnerPage> {
     final run = local ?? runAsync.value;
     final item = ref.watch(localWorkItemProvider(widget.objectId)).value ?? ref.watch(workItemDetailProvider(key)).value;
     final pendingFiles = ref.watch(pendingFilesProvider(widget.objectId)).value ?? const [];
+    final session = ref.watch(currentSessionProvider);
+    final editable = _editable(item, session);
+    final actions = WorkActions(ref, context);
+
+    // CTA bawah mengikuti status: Mulai → (isi checklist) → Selesaikan; ditunda → Lanjutkan.
+    Widget? cta;
+    if (item != null && run != null && item.isOpen) {
+      if (item.can(WorkAction.start)) {
+        cta = BvPrimaryButton(label: 'Mulai Pekerjaan', icon: Icons.play_arrow, loading: _completing, onPressed: () => _run(() => actions.start(item)));
+      } else if (item.can(WorkAction.resume)) {
+        cta = BvPrimaryButton(label: 'Lanjutkan Pekerjaan', icon: Icons.play_arrow, loading: _completing, onPressed: () => _run(() => actions.resume(item)));
+      } else if (item.can(WorkAction.complete) || item.isInProgress) {
+        cta = BvPrimaryButton(
+          label: s.completeWork,
+          icon: Icons.check_circle_outline,
+          loading: _completing,
+          onPressed: () {
+            final dirty = _drafts.values.where((d) => d.dirty).length;
+            if (dirty > 0) {
+              showError(context, AppError(AppErrorKind.validation, 'Simpan dulu $dirty item yang belum disimpan.'));
+              return;
+            }
+            _run(() => actions.complete(item), popOnSuccess: true);
+          },
+        );
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Form Check List')),
@@ -98,48 +148,58 @@ class _ChecklistRunnerPageState extends ConsumerState<ChecklistRunnerPage> {
               error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(checklistRunProvider(key))),
               data: (_) => const EmptyState(title: 'Checklist tidak tersedia', message: 'Pekerjaan ini belum memiliki checklist atau perlu koneksi untuk memuatnya.', icon: Icons.checklist),
             )
-          : _buildList(run, item, pendingFiles),
-      bottomNavigationBar: run == null || item == null || !item.isOpen
-          ? null
-          : BottomActionBar(children: [
-              BvPrimaryButton(
-                label: s.completeWork,
-                icon: Icons.check_circle_outline,
-                loading: _completing,
-                onPressed: item.can(WorkAction.complete) || item.status == 'in_progress'
-                    ? () async {
-                        final dirty = _drafts.values.where((d) => d.dirty).length;
-                        if (dirty > 0) {
-                          showError(context, AppError(AppErrorKind.validation, 'Simpan dulu $dirty item yang belum disimpan.'));
-                          return;
-                        }
-                        setState(() => _completing = true);
-                        final ok = await WorkActions(ref, context).complete(item);
-                        if (!mounted) return;
-                        setState(() => _completing = false);
-                        if (ok) Navigator.of(this.context).pop();
-                      }
-                    : null,
-              ),
-            ]),
+          : _buildList(run, item, pendingFiles, editable),
+      bottomNavigationBar: cta == null ? null : BottomActionBar(children: [cta]),
     );
   }
 
-  Widget _buildList(ChecklistRun run, WorkItem? item, List<PendingFileRow> pendingFiles) {
-    final editable = item?.isOpen ?? true;
+  Widget _buildList(ChecklistRun run, WorkItem? item, List<PendingFileRow> pendingFiles, bool editable) {
     final sections = <String?, List<ChecklistRunItem>>{};
     for (final it in run.items) {
       sections.putIfAbsent(it.section, () => []).add(it);
     }
+    final gateMsg = item == null
+        ? null
+        : !item.isOpen
+        ? 'Pekerjaan sudah ${statusLabel(item.objectType, item.status).toLowerCase()} — checklist hanya dapat dilihat.'
+        : editable
+        ? null
+        : item.status == 'on_hold'
+        ? 'Pekerjaan sedang ditunda. Lanjutkan pekerjaan untuk mengisi checklist.'
+        : 'Mulai pekerjaan terlebih dahulu untuk mengisi checklist.';
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
+        if (gateMsg != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: BvTokens.warning50,
+              borderRadius: BorderRadius.circular(BvTokens.radiusLg),
+              border: Border.all(color: BvTokens.warning100),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: BvTokens.warning700, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(gateMsg, style: const TextStyle(color: BvTokens.warning700, fontSize: 13, height: 1.35)),
+                ),
+              ],
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Row(children: [
-            Expanded(child: Text(run.templateName.isEmpty ? (item?.title ?? 'Checklist') : run.templateName, style: Theme.of(context).textTheme.titleMedium)),
-            Text('${run.answeredCount}/${run.totalItems}', style: const TextStyle(color: BvTokens.neutral500, fontWeight: FontWeight.w700)),
-          ]),
+          child: Row(
+            children: [
+              Expanded(child: Text(run.templateName.isEmpty ? (item?.title ?? 'Checklist') : run.templateName, style: Theme.of(context).textTheme.titleMedium)),
+              Text(
+                '${run.answeredCount}/${run.totalItems}',
+                style: const TextStyle(color: BvTokens.neutral500, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
         ),
         for (final entry in sections.entries) ...[
           if (entry.key != null && entry.key!.isNotEmpty) SectionHeader(title: entry.key!, padding: const EdgeInsets.fromLTRB(4, 8, 4, 8), dotColor: BvTokens.brand500),
@@ -169,15 +229,7 @@ class _ChecklistRunnerPageState extends ConsumerState<ChecklistRunnerPage> {
 }
 
 class _ItemCard extends StatefulWidget {
-  const _ItemCard({
-    required this.item,
-    required this.draft,
-    required this.editable,
-    required this.pendingPhotos,
-    required this.onChanged,
-    required this.onSave,
-    required this.onAddPhoto,
-  });
+  const _ItemCard({required this.item, required this.draft, required this.editable, required this.pendingPhotos, required this.onChanged, required this.onSave, required this.onAddPhoto});
 
   final ChecklistRunItem item;
   final _Draft draft;
@@ -219,17 +271,30 @@ class _ItemCardState extends State<_ItemCard> {
   }
 
   Widget _label(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Container(width: 14, height: 14, decoration: const BoxDecoration(shape: BoxShape.circle, color: BvTokens.brand500)),
-          ),
-          const SizedBox(width: 14),
-          Expanded(child: Text(item.label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: BvTokens.neutral900, height: 1.3))),
-          if (item.isRequired) const Text(' *', style: TextStyle(color: BvTokens.critical600, fontWeight: FontWeight.w800)),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(top: 5),
+        child: Container(
+          width: 14,
+          height: 14,
+          decoration: const BoxDecoration(shape: BoxShape.circle, color: BvTokens.brand500),
+        ),
+      ),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Text(
+          item.label,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: BvTokens.neutral900, height: 1.3),
+        ),
+      ),
+      if (item.isRequired)
+        const Text(
+          ' *',
+          style: TextStyle(color: BvTokens.critical600, fontWeight: FontWeight.w800),
+        ),
+    ],
+  );
 
   /// Tampilan tersimpan (Figma bagian bawah "Cheklist & Report Activity").
   Widget _savedView(BuildContext context) {
@@ -257,10 +322,7 @@ class _ItemCardState extends State<_ItemCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(item.label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  if (item.note != null && item.note!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(item.note!, style: const TextStyle(color: BvTokens.neutral500, fontSize: 13, height: 1.4)),
-                  ],
+                  if (item.note != null && item.note!.isNotEmpty) ...[const SizedBox(height: 4), Text(item.note!, style: const TextStyle(color: BvTokens.neutral500, fontSize: 13, height: 1.4))],
                 ],
               ),
             ),
@@ -272,7 +334,10 @@ class _ItemCardState extends State<_ItemCard> {
                 children: [
                   Icon(notOk ? Icons.sentiment_very_dissatisfied : Icons.sentiment_very_satisfied, color: notOk ? BvTokens.critical600 : BvTokens.success600, size: 22),
                   const SizedBox(width: 8),
-                  Text(resultText, style: TextStyle(color: notOk ? BvTokens.critical600 : BvTokens.success600, fontWeight: FontWeight.w600, fontSize: 14)),
+                  Text(
+                    resultText,
+                    style: TextStyle(color: notOk ? BvTokens.critical600 : BvTokens.success600, fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
                   if (item.photoRequired && item.attachmentId == null && photos.isEmpty) ...[
                     const SizedBox(width: 10),
                     const Icon(Icons.image_not_supported_outlined, color: BvTokens.warning600, size: 18),
@@ -302,31 +367,66 @@ class _ItemCardState extends State<_ItemCard> {
           _label(context),
           const SizedBox(height: 18),
           switch (item.itemType) {
-            'yes_no' => ConditionToggle(value: draft.value, okValue: 'yes', notOkValue: 'no', okLabel: 'Ya', notOkLabel: 'Tidak', enabled: editable, onChanged: (v) { draft.value = v; widget.onChanged(); }),
+            'yes_no' => ConditionToggle(
+              value: draft.value,
+              okValue: 'yes',
+              notOkValue: 'no',
+              okLabel: 'Ya',
+              notOkLabel: 'Tidak',
+              enabled: editable,
+              onChanged: (v) {
+                draft.value = v;
+                widget.onChanged();
+              },
+            ),
             'numeric' => TextFormField(
-                initialValue: draft.number,
-                enabled: editable,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                decoration: InputDecoration(
-                  labelText: 'Nilai${item.numericUnit != null ? ' (${item.numericUnit})' : ''}',
-                  helperText: item.numericMin != null || item.numericMax != null ? 'Rentang normal: ${item.numericMin ?? '-'} – ${item.numericMax ?? '-'}' : null,
-                  suffixIcon: _notOk ? const Icon(Icons.warning_amber, color: BvTokens.warning600) : null,
-                ),
-                onChanged: (v) { draft.number = v; widget.onChanged(); },
+              initialValue: draft.number,
+              enabled: editable,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              decoration: InputDecoration(
+                labelText: 'Nilai${item.numericUnit != null ? ' (${item.numericUnit})' : ''}',
+                helperText: item.numericMin != null || item.numericMax != null ? 'Rentang normal: ${item.numericMin ?? '-'} – ${item.numericMax ?? '-'}' : null,
+                suffixIcon: _notOk ? const Icon(Icons.warning_amber, color: BvTokens.warning600) : null,
               ),
+              onChanged: (v) {
+                draft.number = v;
+                widget.onChanged();
+              },
+            ),
             'text' => TextFormField(
-                initialValue: draft.text,
-                enabled: editable,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Jawaban'),
-                onChanged: (v) { draft.text = v; widget.onChanged(); },
-              ),
+              initialValue: draft.text,
+              enabled: editable,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Jawaban'),
+              onChanged: (v) {
+                draft.text = v;
+                widget.onChanged();
+              },
+            ),
             'photo' => const SizedBox.shrink(),
-            _ => ConditionToggle(value: draft.value, enabled: editable, onChanged: (v) { draft.value = v; widget.onChanged(); }),
+            _ => ConditionToggle(
+              value: draft.value,
+              enabled: editable,
+              onChanged: (v) {
+                draft.value = v;
+                widget.onChanged();
+              },
+            ),
           },
           if (thumbs.isNotEmpty) ...[
             const SizedBox(height: 14),
-            PhotoThumbnailRow(photos: thumbs, size: 66, onRemove: draft.photo == null ? null : (t) { if (t.bytes != null) { draft.photo = null; widget.onChanged(); } }),
+            PhotoThumbnailRow(
+              photos: thumbs,
+              size: 66,
+              onRemove: draft.photo == null
+                  ? null
+                  : (t) {
+                      if (t.bytes != null) {
+                        draft.photo = null;
+                        widget.onChanged();
+                      }
+                    },
+            ),
           ],
           if (_notOk) ...[
             const SizedBox(height: 14),
@@ -335,7 +435,10 @@ class _ItemCardState extends State<_ItemCard> {
               enabled: editable,
               maxLines: 3,
               decoration: const InputDecoration(labelText: 'Keterangan', alignLabelWithHint: true),
-              onChanged: (v) { draft.note = v; widget.onChanged(); },
+              onChanged: (v) {
+                draft.note = v;
+                widget.onChanged();
+              },
             ),
             if (editable)
               Container(
@@ -349,7 +452,10 @@ class _ItemCardState extends State<_ItemCard> {
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         value: draft.createFinding,
-                        onChanged: (v) { draft.createFinding = v; widget.onChanged(); },
+                        onChanged: (v) {
+                          draft.createFinding = v;
+                          widget.onChanged();
+                        },
                         title: const Text('Buat Temuan (Finding)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                       ),
                     ),
@@ -357,15 +463,30 @@ class _ItemCardState extends State<_ItemCard> {
                       DropdownButton<String>(
                         value: draft.findingSeverity,
                         underline: const SizedBox.shrink(),
-                        items: [for (final sv in const ['low', 'medium', 'high', 'critical']) DropdownMenuItem(value: sv, child: Text(severityLabel(sv), style: const TextStyle(fontSize: 13)))],
-                        onChanged: (v) { draft.findingSeverity = v ?? 'medium'; widget.onChanged(); },
+                        items: [
+                          for (final sv in const ['low', 'medium', 'high', 'critical'])
+                            DropdownMenuItem(
+                              value: sv,
+                              child: Text(severityLabel(sv), style: const TextStyle(fontSize: 13)),
+                            ),
+                        ],
+                        onChanged: (v) {
+                          draft.findingSeverity = v ?? 'medium';
+                          widget.onChanged();
+                        },
                       ),
                   ],
                 ),
               ),
           ],
           if (item.photoRequired && thumbs.isEmpty && item.attachmentId == null && _hasAnswer)
-            const Padding(padding: EdgeInsets.only(top: 10), child: Text('Foto wajib untuk item ini', style: TextStyle(color: BvTokens.warning700, fontSize: 12, fontWeight: FontWeight.w600))),
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text(
+                'Foto wajib untuk item ini',
+                style: TextStyle(color: BvTokens.warning700, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -373,7 +494,12 @@ class _ItemCardState extends State<_ItemCard> {
               const Spacer(),
               if (editable)
                 SaveButton(
-                  onPressed: canSave ? () { widget.onSave(); setState(() => _editing = false); } : null,
+                  onPressed: canSave
+                      ? () {
+                          widget.onSave();
+                          setState(() => _editing = false);
+                        }
+                      : null,
                   loading: draft.saving,
                   label: draft.dirty || !item.isAnswered ? 'Simpan' : 'Tersimpan',
                 ),

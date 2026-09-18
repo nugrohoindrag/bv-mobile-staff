@@ -64,6 +64,40 @@ void main() {
     expect(tapped, isTrue);
   });
 
+  testWidgets('WorkItemCard di layar sempit dengan semua badge tidak overflow / tumpang tindih', (tester) async {
+    await initializeDateFormatting('id');
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final item = WorkItem(
+      id: 'w2',
+      objectType: 'work_order',
+      number: 'WO-2026-000999',
+      type: 'corrective',
+      title: 'Perbaikan panel listrik utama lantai 12 tower pinus yang sering trip',
+      status: 'in_progress',
+      priority: 'critical',
+      isOverdue: true,
+      flags: const ['overdue', 'sla_breach'],
+      location: const LocationRef(pathText: 'Tower Pinus / Lantai 12 / Ruang Panel Utama Koridor Timur'),
+      assignee: const AssigneeRef(userId: 'u1', userName: 'Budi Santoso'),
+      dueAt: DateTime(2026, 9, 15, 23, 59),
+      createdAt: DateTime(2026, 9, 15),
+      updatedAt: DateTime(2026, 9, 15),
+    );
+    // Font Ahem lebih lebar dari Nunito — 360px di sini setara ≈ HP 320px dengan font asli.
+    await tester.pumpWidget(wrap(SizedBox(width: 360, child: WorkItemCard(item: item, syncState: SyncState.failed, showNumber: true))));
+    expect(tester.takeException(), isNull, reason: 'tidak ada RenderFlex overflow');
+    expect(find.text('Sedang Dikerjakan'), findsOneWidget);
+    expect(find.text('Sync Failed'), findsOneWidget);
+    // badge status tidak menimpa badge lain (tidak ada overlap kotak)
+    final status = tester.getRect(find.text('Sedang Dikerjakan'));
+    final sync = tester.getRect(find.text('Sync Failed'));
+    expect(status.overlaps(sync), isFalse);
+    final overdue = tester.getRect(find.text('Overdue'));
+    expect(status.overlaps(overdue), isFalse);
+  });
+
   testWidgets('ConditionToggle memilih ok / not_ok', (tester) async {
     await phoneSurface(tester);
     String? value;

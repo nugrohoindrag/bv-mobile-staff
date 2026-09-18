@@ -104,7 +104,7 @@ class FakeSyncServer extends Interceptor {
           continue;
         }
         obj['status'] = next;
-        results.add({'client_mutation_id': id, 'status': 'applied', 'server_version': (obj['version'] = (obj['version'] as int) + 1)});
+        results.add({'client_mutation_id': id, 'status': 'applied', 'server_version': (obj['version'] = (obj['version'] as int) + 1), 'response': {'status': next}});
       }
       return h.resolve(_ok(o, {'server_time': '2026-09-15T02:00:01Z', 'results': results}));
     }
@@ -214,6 +214,83 @@ void main() {
     expect(sent.map((m) => m['seq']), [1, 2], reason: 'urut seq per object');
     expect(sent.first['payload']['client_recorded_at'], isNotNull, reason: 'C8: client time dikirim apa adanya');
     expect(sent.first['payload']['gps_status'], 'captured');
+  });
+
+  test('item dari server (bukan bundle) bisa dimulai: baris lokal dibuat, status tidak mundur setelah push', () async {
+    // t9 tidak ada di bundle (mis. jadwal besok / deep link) — detail dimuat dari server lalu worker menekan Mulai.
+    server.objects['t9'] = {'status': 'assigned', 'assignee': 'u1', 'version': 1};
+    final remote = WorkItem.fromJson(taskJson('t9'));
+    expect(await repo.getWorkItem('t9'), isNull);
+    await repo.transition(remote, WorkAction.start, const TransitionInput(gpsStatus: 'denied'));
+    var local = await repo.getWorkItem('t9');
+    expect(local, isNotNull, reason: 'ensureLocal: overlay pending punya baris untuk menempel');
+    expect(local!.status, 'in_progress');
+    expect(local.can(WorkAction.complete), isTrue);
+    expect(await repo.syncStateOf('t9'), SyncState.pending);
+
+    final applied = <String>[];
+    engine = SyncEngine(db: db, repo: repo, syncApi: SyncApi(client), attachmentsApi: AttachmentsApi(client), now: () => clock,
+        onApplied: (objs) async => applied.addAll(objs.map((o) => '${o.objectType}:${o.objectId}')));
+    await engine.syncNow(pull: false);
+    expect(server.objects['t9']!['status'], 'in_progress');
+    expect(applied, ['task:t9'], reason: 'hook refresh dipanggil untuk object yang mutasinya diterima');
+    // Mutasi sudah synced (keluar dari overlay) dan belum ada pull: status lokal harus tetap in_progress.
+    local = await repo.getWorkItem('t9');
+    expect(local!.status, 'in_progress', reason: 'applyServerStatus dari respons transisi');
+    expect(local.can(WorkAction.complete), isTrue);
+    expect(local.can(WorkAction.start), isFalse, reason: 'tombol Mulai tidak muncul lagi');
+    expect(await repo.syncStateOf('t9'), SyncState.synced);
+  });
+
+  test('foto/komentar pending tidak menghapus allowed_actions server (Mulai/Tugaskan tetap ada)', () async {
+    server.bundleTasks = [
+      {...taskJson('t1'), 'allowed_actions': ['start', 'assign', 'comment', 'attach', 'view']},
+    ];
+    await engine.pull();
+    await repo.attachPhoto('task', 't1', CapturedPhoto(bytes: Uint8List.fromList([1, 2, 3]), capturedAt: clock, gpsStatus: 'denied'), attachmentType: AttachmentType.before);
+    await repo.addComment('task', 't1', 'catatan');
+    final t1 = (await repo.getWorkItem('t1'))!;
+    expect(t1.attachmentCount, 1);
+    expect(t1.commentCount, 1);
+    expect(t1.status, 'assigned');
+    expect(t1.allowedActions, ['start', 'assign', 'comment', 'attach', 'view'], reason: 'status tidak berubah → allowed_actions server dipertahankan');
+    await repo.transition(t1, WorkAction.start, const TransitionInput());
+    final started = (await repo.getWorkItem('t1'))!;
+    expect(started.allowedActions, containsAll(['hold', 'complete', 'comment', 'attach', 'view']));
+    expect(started.allowedActions, isNot(contains('start')));
+  });
+
+  test("mutasi 'sending' yang macet (app terbunuh saat push) dikirim ulang pada push berikutnya", () async {
+    await engine.pull();
+    final t1 = (await repo.getWorkItem('t1'))!;
+    await repo.transition(t1, WorkAction.start, const TransitionInput());
+    await repo.addComment('task', 't1', 'lanjut');
+    // simulasi crash: baris pertama tertinggal 'sending'
+    await (db.update(db.mutations)..where((t) => t.seq.equals(1))).write(const MutationsCompanion(status: Value('sending')));
+    await engine.syncNow(pull: false);
+    expect(await mutationStatuses(), {'t1#1:start': 'synced', 't1#2:add_comment': 'synced'});
+    expect(server.objects['t1']!['status'], 'in_progress');
+  });
+
+  test('discardFailed: mutasi ditolak dibuang sehingga mutasi berikutnya untuk object yang sama terkirim', () async {
+    await engine.pull();
+    final t1 = (await repo.getWorkItem('t1'))!;
+    server.objects.remove('t1'); // start → NOT_FOUND (rejected → failed)
+    await repo.transition(t1, WorkAction.start, const TransitionInput());
+    await engine.syncNow(pull: false);
+    expect((await mutationStatuses())['t1#1:start'], 'failed');
+    server.objects['t1'] = {'status': 'in_progress', 'assignee': 'u1', 'version': 2};
+    server.lastSeq['t1'] = 1;
+    await repo.addComment('task', 't1', 'komentar setelah gagal');
+    await engine.syncNow(pull: false);
+    expect((await mutationStatuses())['t1#2:add_comment'], 'pending', reason: 'C9: diblokir mutasi failed sebelumnya');
+    await repo.discardFailed('t1');
+    expect(await repo.syncStateOf('t1'), SyncState.pending);
+    await engine.syncNow(pull: false);
+    final st = await mutationStatuses();
+    expect(st['t1#1:start'], 'discarded');
+    expect(st['t1#2:add_comment'], 'synced');
+    expect(await repo.syncStateOf('t1'), SyncState.synced);
   });
 
   test('C3: object closed di server → conflict, tidak di-retry, state lokal diganti saat pull', () async {

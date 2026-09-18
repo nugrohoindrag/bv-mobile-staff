@@ -85,7 +85,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/patrol/:id', builder: (_, s) => PatrolDetailPage(taskId: s.pathParameters['id']!)),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/assets/:id', builder: (_, s) => AssetPage(assetId: s.pathParameters['id']!)),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/new/work-order', builder: (_, s) => CreateWorkOrderPage(assetId: s.uri.queryParameters['asset_id'], locationId: s.uri.queryParameters['location_id'], sourceType: s.uri.queryParameters['source_type'], sourceId: s.uri.queryParameters['source_id'])),
-      GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/new/incident', builder: (_, s) => ReportIncidentPage(taskId: s.uri.queryParameters['task_id'], locationId: s.uri.queryParameters['location_id'])),
+      GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/new/incident', builder: (_, s) => ReportIncidentPage(taskId: s.uri.queryParameters['task_id'], locationId: s.uri.queryParameters['location_id'], panic: s.uri.queryParameters['panic'] == '1')),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/new/finding', builder: (_, s) => AddFindingPage(objectType: s.uri.queryParameters['object_type']!, objectId: s.uri.queryParameters['object_id']!, locationId: s.uri.queryParameters['location_id'], assetId: s.uri.queryParameters['asset_id'])),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/scan/full', builder: (_, s) => ScanPage(patrolTaskId: s.uri.queryParameters['patrol_task_id'], fullScreen: true)),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/sync-status', builder: (_, _) => const SyncStatusPage()),

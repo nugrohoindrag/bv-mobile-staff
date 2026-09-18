@@ -57,10 +57,8 @@ class SessionController extends AsyncNotifier<Session?> {
       final prefs = ref.read(bootstrapProvider).prefs;
       await prefs.setString(_meKey, jsonEncode(res.user.toJson()));
       ref.read(sessionSignalsProvider.notifier).reset();
-      // Bundle awal (full) — jangan blokir login bila gagal jaringan.
-      try {
-        await ref.read(syncEngineProvider).pull(full: true);
-      } on AppError catch (_) {}
+      // Bundle awal ditarik SyncController (listen sessionProvider → trigger) — tidak di-await di sini
+      // agar tombol Masuk tidak "menggantung" beberapa detik dan bundle tidak ditarik dua kali.
       return _fromMe(res.user);
     });
   }

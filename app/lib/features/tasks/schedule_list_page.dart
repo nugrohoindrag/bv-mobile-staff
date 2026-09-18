@@ -11,16 +11,17 @@ import '../home/work_item_list.dart';
 import 'work_providers.dart';
 
 /// Jenis daftar jadwal (Figma "Daftar Jadwal Pekerjaan Preventive/Corrective").
-enum ScheduleKind { preventive, corrective, cleaning, task, history }
+enum ScheduleKind { preventive, corrective, cleaning, task, tenant, history }
 
 extension ScheduleKindX on ScheduleKind {
   String get title => switch (this) {
-        ScheduleKind.preventive => 'Daftar Jadwal Pekerjaan Preventive',
-        ScheduleKind.corrective => 'Daftar Jadwal Pekerjaan Corrective',
-        ScheduleKind.cleaning => 'Daftar Jadwal Cleaning',
-        ScheduleKind.task => 'Daftar Task',
-        ScheduleKind.history => 'History Pekerjaan',
-      };
+    ScheduleKind.preventive => 'Daftar Jadwal Pekerjaan Preventive',
+    ScheduleKind.corrective => 'Daftar Jadwal Pekerjaan Corrective',
+    ScheduleKind.cleaning => 'Daftar Jadwal Cleaning',
+    ScheduleKind.task => 'Daftar Task',
+    ScheduleKind.tenant => 'Permintaan Tenant',
+    ScheduleKind.history => 'History Pekerjaan',
+  };
 
   static ScheduleKind parse(String s) => ScheduleKind.values.firstWhere((k) => k.name == s, orElse: () => ScheduleKind.task);
 }
@@ -28,12 +29,13 @@ extension ScheduleKindX on ScheduleKind {
 bool _isPreventive(WorkItem i) => i.maintenanceScheduleId != null || i.type == 'preventive' || i.type == 'inspection';
 
 bool _matches(ScheduleKind kind, WorkItem i) => switch (kind) {
-      ScheduleKind.preventive => _isPreventive(i),
-      ScheduleKind.corrective => !_isPreventive(i) && !i.isCleaning && !i.isPatrol,
-      ScheduleKind.cleaning => i.isCleaning,
-      ScheduleKind.task => !i.isPatrol && !i.isCleaning,
-      ScheduleKind.history => !i.isOpen,
-    };
+  ScheduleKind.preventive => _isPreventive(i),
+  ScheduleKind.corrective => !_isPreventive(i) && !i.isCleaning && !i.isPatrol,
+  ScheduleKind.cleaning => i.isCleaning,
+  ScheduleKind.task => !i.isPatrol && !i.isCleaning,
+  ScheduleKind.tenant => i.sourceType == 'service_request',
+  ScheduleKind.history => !i.isOpen,
+};
 
 /// Item per tanggal: lokal (bundle hari ini + open/overdue) digabung hasil server untuk tanggal lain.
 final scheduleDayProvider = FutureProvider.family<List<WorkItem>, ({ScheduleKind kind, DateTime day})>((ref, key) async {
@@ -61,7 +63,8 @@ final scheduleDayProvider = FutureProvider.family<List<WorkItem>, ({ScheduleKind
       final filter = WorkFilter(status: status, assigneeId: session.isSupervisor ? null : me, sort: 'scheduled_start_at', limit: 100, extra: extra);
       final futures = <Future<Page<WorkItem>>>[];
       if (key.kind != ScheduleKind.cleaning) futures.add(api.list('task', filter));
-      if (key.kind == ScheduleKind.corrective || key.kind == ScheduleKind.preventive || key.kind == ScheduleKind.history) futures.add(api.list('work_order', filter));
+      const withWo = {ScheduleKind.corrective, ScheduleKind.preventive, ScheduleKind.tenant, ScheduleKind.history};
+      if (withWo.contains(key.kind)) futures.add(api.list('work_order', filter));
       if (key.kind == ScheduleKind.cleaning) futures.add(ref.watch(cleaningApiProvider).list(filter));
       for (final p in await Future.wait(futures)) {
         for (final i in p.data.where((i) => _matches(key.kind, i) && onDay(i))) {
@@ -106,13 +109,7 @@ class _ScheduleListPageState extends ConsumerState<ScheduleListPage> {
       appBar: AppBar(
         title: Text(widget.kind.title),
         automaticallyImplyLeading: !widget.embedded,
-        actions: [
-          IconButton(
-            tooltip: 'Hari ini',
-            icon: const Icon(Icons.today_outlined),
-            onPressed: () => setState(() => _day = DateTime.now()),
-          ),
-        ],
+        actions: [IconButton(tooltip: 'Hari ini', icon: const Icon(Icons.today_outlined), onPressed: () => setState(() => _day = DateTime.now()))],
       ),
       body: Column(
         children: [
@@ -133,9 +130,19 @@ class _ScheduleListPageState extends ConsumerState<ScheduleListPage> {
               },
               child: items.when(
                 loading: () => ListView(padding: const EdgeInsets.all(16), children: const [SkeletonCard(), SizedBox(height: 12), SkeletonCard()]),
-                error: (e, _) => ListView(children: [ErrorState(error: e, onRetry: () => ref.invalidate(scheduleDayProvider(key)))]),
+                error: (e, _) => ListView(
+                  children: [ErrorState(error: e, onRetry: () => ref.invalidate(scheduleDayProvider(key)))],
+                ),
                 data: (list) => list.isEmpty
-                    ? ListView(children: [EmptyState(title: 'Tidak ada pekerjaan', message: 'Tidak ada ${widget.kind == ScheduleKind.history ? 'riwayat' : 'jadwal'} pada ${BvFormat.dateLong(_day)}.', icon: Icons.event_busy_outlined)])
+                    ? ListView(
+                        children: [
+                          EmptyState(
+                            title: 'Tidak ada pekerjaan',
+                            message: 'Tidak ada ${widget.kind == ScheduleKind.history ? 'riwayat' : 'jadwal'} pada ${BvFormat.dateLong(_day)}.',
+                            icon: Icons.event_busy_outlined,
+                          ),
+                        ],
+                      )
                     : ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: list.length,

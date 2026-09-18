@@ -28,6 +28,7 @@ class WorkActions {
     final fix = await const GpsService().capture();
     await _repo.transition(item, WorkAction.start, TransitionInput(gpsStatus: fix.status, gpsLat: fix.lat, gpsLng: fix.lng));
     _kick();
+    if (context.mounted) showInfo(context, 'Pekerjaan dimulai${fix.status == GpsStatus.captured ? '' : ' (lokasi GPS tidak tersedia)'}');
     return true;
   }
 
@@ -36,27 +37,56 @@ class WorkActions {
     if (reason == null) return false;
     await _repo.transition(item, WorkAction.hold, TransitionInput(reason: reason));
     _kick();
+    if (context.mounted) showInfo(context, 'Pekerjaan ditunda');
     return true;
   }
 
   Future<bool> resume(WorkItem item) async {
     await _repo.transition(item, WorkAction.resume, const TransitionInput());
     _kick();
+    if (context.mounted) showInfo(context, 'Pekerjaan dilanjutkan');
     return true;
   }
 
   /// Guard lokal sebelum complete (PRD §11.2): checklist wajib terjawab, foto wajib ada, evidence bila diminta.
+  /// Server (`evidenceSatisfied`) menuntut **foto sesudah** (`photo_after`) untuk WO `requires_evidence`
+  /// (ditangani [_ensureAfterPhoto]); Task menerima foto tipe apa pun (photo / checklist).
   Future<String?> completeBlocker(WorkItem item) async {
     final run = await _repo.getRun(item.id);
     if (run != null) {
       if (run.requiredUnanswered > 0) return 'Masih ada ${run.requiredUnanswered} item checklist wajib yang belum dijawab.';
       if (run.photoMissing > 0) return 'Foto wajib belum lengkap pada ${run.photoMissing} item checklist.';
     }
-    if (item.requiresEvidence) {
-      final pending = await _repo.watchPendingFiles(item.id).first;
-      if (item.attachmentCount == 0 && pending.isEmpty) return 'Pekerjaan ini wajib menyertakan foto evidence.';
+    if (item.requiresEvidence && !item.isWorkOrder) {
+      final local = await _repo.countLocalPhotos(item.id);
+      if (item.attachmentCount == 0 && local == 0) return 'Pekerjaan ini wajib menyertakan foto evidence.';
     }
     return null;
+  }
+
+  /// WO `requires_evidence`: pastikan ada foto sesudah pengerjaan (lokal/server); bila belum, minta ambil sekarang.
+  Future<bool> _ensureAfterPhoto(WorkItem item) async {
+    if (!item.isWorkOrder || !item.requiresEvidence) return true;
+    if (await _repo.countLocalPhotos(item.id, attachmentType: AttachmentType.after) > 0) return true;
+    try {
+      final remote = await ref.read(attachmentsApiProvider).list(item.objectType, item.id);
+      if (remote.any((a) => a.attachmentType == AttachmentType.after)) return true;
+    } on AppError catch (_) {
+      // offline: hanya bisa memastikan dari foto lokal
+    }
+    if (!context.mounted) return false;
+    final take = await showBvConfirmDialog(
+      context,
+      title: 'Foto Sesudah Pengerjaan',
+      message: 'Work order ini wajib menyertakan foto kondisi sesudah pengerjaan sebelum diselesaikan. Ambil foto sekarang?',
+      confirm: 'Ambil Foto',
+    );
+    if (!take || !context.mounted) return false;
+    final photo = await const PhotoCapture().pick(context);
+    if (photo == null) return false;
+    await _repo.ensureLocal(item);
+    await _repo.attachPhoto(item.objectType, item.id, photo, attachmentType: AttachmentType.after);
+    return true;
   }
 
   Future<bool> complete(WorkItem item) async {
@@ -66,25 +96,36 @@ class WorkActions {
       showError(context, AppError(AppErrorKind.validation, blocker));
       return false;
     }
-    final ok = await showBvConfirmDialog(context, title: 'Konfirmasi Menyelesaikan Pengerjaan', message: 'Saat pekerjaan diselesaikan, status pekerjaan akan berubah menjadi "done"', confirm: 'Selesai');
+    if (!await _ensureAfterPhoto(item)) return false;
+    if (!context.mounted) return false;
+    final ok = await showBvConfirmDialog(
+      context,
+      title: 'Konfirmasi Menyelesaikan Pengerjaan',
+      message: 'Saat pekerjaan diselesaikan, status pekerjaan akan berubah menjadi "done"',
+      confirm: 'Selesai',
+    );
     if (!ok) return false;
     final fix = await const GpsService().capture();
     await _repo.transition(item, WorkAction.complete, TransitionInput(gpsStatus: fix.status, gpsLat: fix.lat, gpsLng: fix.lng));
     _kick();
+    if (context.mounted) showInfo(context, 'Pekerjaan diselesaikan — menunggu verifikasi supervisor');
     return true;
   }
 
   Future<bool> addPhoto(WorkItem item, {String type = AttachmentType.photo}) async {
     final photo = await const PhotoCapture().pick(context);
     if (photo == null) return false;
+    await _repo.ensureLocal(item);
     await _repo.attachPhoto(item.objectType, item.id, photo, attachmentType: type);
     _kick();
+    if (context.mounted) showInfo(context, 'Foto ditambahkan — diunggah saat online');
     return true;
   }
 
   Future<bool> addComment(WorkItem item) async {
     final body = await showReasonDialog(context, title: 'Tambah komentar', hint: 'Tulis komentar', confirm: 'Kirim');
     if (body == null || body.isEmpty) return false;
+    await _repo.ensureLocal(item);
     await _repo.addComment(item.objectType, item.id, body);
     _kick();
     return true;

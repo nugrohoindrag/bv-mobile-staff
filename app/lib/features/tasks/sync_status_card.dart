@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_controller.dart';
+import '../../shared/dialogs.dart';
 import 'work_providers.dart';
 
 /// Kartu status sync di detail (PRD §21): Pending Sync / Sync Failed (Coba lagi) / Sync Conflict (alasan; tanpa retry).
@@ -21,35 +22,60 @@ class SyncStatusCard extends ConsumerWidget {
     final conflicts = rows.where((m) => m.status == 'conflict').toList();
     if (pending == 0 && failed.isEmpty && conflicts.isEmpty) return const SizedBox.shrink();
 
-    final state = conflicts.isNotEmpty ? SyncState.conflict : failed.isNotEmpty ? SyncState.failed : SyncState.pending;
+    final state = conflicts.isNotEmpty
+        ? SyncState.conflict
+        : failed.isNotEmpty
+        ? SyncState.failed
+        : SyncState.pending;
     final p = SemanticPalette.of(semanticOf(statusDefOf('sync_state', state)!.semantic));
     final msg = conflicts.isNotEmpty
         ? (conflicts.last.lastError ?? 'Konflik — ditinjau supervisor')
         : failed.isNotEmpty
-            ? (failed.last.lastError ?? 'Gagal disinkronkan')
-            : '$pending perubahan menunggu sinkronisasi';
+        ? (failed.last.lastError ?? 'Gagal disinkronkan')
+        : '$pending perubahan menunggu sinkronisasi';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: p.soft, borderRadius: BorderRadius.circular(BvTokens.radiusLg), border: Border.all(color: p.softBorder)),
+      decoration: BoxDecoration(
+        color: p.soft,
+        borderRadius: BorderRadius.circular(BvTokens.radiusLg),
+        border: Border.all(color: p.softBorder),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            SyncBadge(state, dense: false),
-            const Spacer(),
-            if (state == SyncState.failed)
-              TextButton(
-                onPressed: () async {
-                  await ref.read(localRepoProvider).retryFailed(objectId);
-                  ref.read(syncControllerProvider.notifier).afterMutation();
-                },
-                child: const Text('Coba lagi'),
-              ),
-            if (state == SyncState.conflict)
-              TextButton(onPressed: () => ref.read(localRepoProvider).dismissConflict(objectId), child: const Text('Mengerti')),
-          ]),
+          Row(
+            children: [
+              SyncBadge(state, dense: false),
+              const Spacer(),
+              if (state == SyncState.failed) ...[
+                TextButton(
+                  onPressed: () async {
+                    final ok = await showConfirmDialog(
+                      context,
+                      title: 'Buang perubahan yang ditolak?',
+                      message: 'Perubahan yang ditolak server dihapus dari antrean; data di layar kembali mengikuti server. Perubahan lain setelahnya akan dikirim.',
+                      confirm: 'Buang',
+                      danger: true,
+                    );
+                    if (!ok) return;
+                    await ref.read(localRepoProvider).discardFailed(objectId);
+                    ref.read(syncControllerProvider.notifier).afterMutation();
+                  },
+                  child: const Text('Buang'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    await ref.read(localRepoProvider).retryFailed(objectId);
+                    ref.read(syncControllerProvider.notifier).afterMutation();
+                  },
+                  child: const Text('Coba lagi'),
+                ),
+              ],
+              if (state == SyncState.conflict) TextButton(onPressed: () => ref.read(localRepoProvider).dismissConflict(objectId), child: const Text('Mengerti')),
+            ],
+          ),
           const SizedBox(height: 4),
           Text(msg, style: TextStyle(color: p.text, fontSize: 13)),
           if (state == SyncState.conflict)

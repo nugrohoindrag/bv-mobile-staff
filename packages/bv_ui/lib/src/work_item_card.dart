@@ -63,6 +63,15 @@ class WorkItemCard extends StatelessWidget {
     final assignees = [if (item.assignee.userName != null) item.assignee.userName!];
     final flags = item.flags.where((f) => f != 'overdue' || !item.isOverdue).toList();
 
+    // Badge status ikut alur layout (baris judul, menempel tepi kanan) — bukan overlay Positioned yang
+    // menimpa baris badge/avatar di bawah. Baris badge memakai Wrap agar tidak overflow di layar sempit.
+    final badges = <Widget>[
+      if (item.isOverdue) const FlagBadge('overdue'),
+      if (item.priority == 'critical' || item.priority == 'high') PriorityBadge(item.priority),
+      for (final f in flags.where((f) => f != 'overdue').take(1)) FlagBadge(f),
+      if (syncState != null && syncState != SyncState.synced) SyncBadge(syncState!),
+    ];
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -84,52 +93,64 @@ class WorkItemCard extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(14, 14, 0, 14),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        KindIcon(_kind),
+                        Padding(padding: const EdgeInsets.only(top: 2), child: KindIcon(_kind)),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.title.toUpperCase(), maxLines: 2, overflow: TextOverflow.ellipsis, style: t.titleMedium?.copyWith(fontSize: 16, fontWeight: FontWeight.w800)),
-                              if (item.location.pathText != null && item.location.pathText!.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(item.location.pathText!.toUpperCase(),
-                                    maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: BvTokens.neutral500, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
-                              ] else if (item.asset.name != null) ...[
-                                const SizedBox(height: 2),
-                                Text(item.asset.name!, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: BvTokens.neutral500, fontWeight: FontWeight.w600)),
-                              ],
-                              const SizedBox(height: 2),
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (showNumber) ...[
-                                    Text(item.number, style: t.bodySmall?.copyWith(color: BvTokens.neutral400)),
-                                    const SizedBox(width: 6),
-                                    const Text('·', style: TextStyle(color: BvTokens.neutral400)),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  Flexible(
-                                    child: Text(
-                                      BvFormat.timeDayDate(when),
-                                      style: t.bodySmall?.copyWith(color: item.isOverdue ? BvTokens.critical600 : BvTokens.neutral500, fontWeight: item.isOverdue ? FontWeight.w700 : FontWeight.w400),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
+                                  Expanded(child: Text(item.title.toUpperCase(), maxLines: 2, overflow: TextOverflow.ellipsis, style: t.titleMedium?.copyWith(fontSize: 16, fontWeight: FontWeight.w800))),
+                                  const SizedBox(width: 8),
+                                  Padding(padding: const EdgeInsets.only(top: 1), child: StatusBadge(item.objectType, item.status, attachedRight: true, dense: true)),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  if (assignees.isNotEmpty) AvatarStack(names: assignees, size: 26) else const SizedBox(height: 26),
-                                  const SizedBox(width: 8),
-                                  if (item.isOverdue) const FlagBadge('overdue'),
-                                  if (item.isOverdue) const SizedBox(width: 4),
-                                  if (item.priority == 'critical' || item.priority == 'high') PriorityBadge(item.priority),
-                                  for (final f in flags.where((f) => f != 'overdue').take(1)) ...[const SizedBox(width: 4), FlagBadge(f)],
-                                  const Spacer(),
-                                  if (syncState != null && syncState != SyncState.synced) SyncBadge(syncState!),
-                                ],
+                              Padding(
+                                padding: const EdgeInsets.only(right: 14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (item.location.pathText != null && item.location.pathText!.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(item.location.pathText!.toUpperCase(),
+                                          maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: BvTokens.neutral500, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+                                    ] else if (item.asset.name != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(item.asset.name!, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: BvTokens.neutral500, fontWeight: FontWeight.w600)),
+                                    ],
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        if (showNumber) ...[
+                                          Text(item.number, style: t.bodySmall?.copyWith(color: BvTokens.neutral400)),
+                                          const SizedBox(width: 6),
+                                          const Text('·', style: TextStyle(color: BvTokens.neutral400)),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        Flexible(
+                                          child: Text(
+                                            BvFormat.timeDayDate(when),
+                                            style: t.bodySmall?.copyWith(color: item.isOverdue ? BvTokens.critical600 : BvTokens.neutral500, fontWeight: item.isOverdue ? FontWeight.w700 : FontWeight.w400),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        if (assignees.isNotEmpty) AvatarStack(names: assignees, size: 26) else const SizedBox(height: 26),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Wrap(spacing: 4, runSpacing: 4, children: badges)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -143,20 +164,7 @@ class WorkItemCard extends StatelessWidget {
           ),
         ),
       ),
-    ).withStatusBadge(item);
+    );
   }
 }
 
-extension on Widget {
-  /// Badge status menempel kanan-bawah kartu (mockup "new" / "on progress").
-  Widget withStatusBadge(WorkItem item) => Stack(
-        children: [
-          this,
-          Positioned(
-            right: 0,
-            bottom: 18,
-            child: StatusBadge(item.objectType, item.status, attachedRight: true),
-          ),
-        ],
-      );
-}

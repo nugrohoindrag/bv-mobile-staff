@@ -17,9 +17,12 @@ import '../tasks/work_providers.dart';
 /// Laporkan Insiden (PRD §14, §20.2). Dari task (patrol) → antrean sync `report_incident` (offline OK);
 /// tanpa task → `POST /incidents` (online).
 class ReportIncidentPage extends ConsumerStatefulWidget {
-  const ReportIncidentPage({super.key, this.taskId, this.locationId});
+  const ReportIncidentPage({super.key, this.taskId, this.locationId, this.panic = false});
   final String? taskId;
   final String? locationId;
+
+  /// Panic Button (security): form terisi awal kategori keamanan + severity kritis + prioritas kritis.
+  final bool panic;
   @override
   ConsumerState<ReportIncidentPage> createState() => _ReportIncidentPageState();
 }
@@ -41,6 +44,12 @@ class _ReportIncidentPageState extends ConsumerState<ReportIncidentPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.panic) {
+      _category = 'security';
+      _severity = 'critical';
+      _priority = 'critical';
+      _title.text = 'PANIC — butuh bantuan segera';
+    }
     Future.microtask(() async {
       if (widget.locationId != null && widget.locationId!.isNotEmpty) {
         final l = (await ref.read(localRepoProvider).locations()).where((l) => l.id == widget.locationId).firstOrNull;

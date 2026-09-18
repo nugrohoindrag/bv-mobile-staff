@@ -7,6 +7,7 @@ modules:
     organizations: [view, update]
     audit_logs: [view]
     exports: [create]
+    app_downloads: [view, manage]       # Website PRD §16–§19: hanya role admin_internal pada organization internal (dicek server-side)
   iam:
     users: [view, create, update, deactivate, reset_password]
     roles: [view, create, update, delete]
@@ -158,6 +159,10 @@ roles:
   finance_staff:
     label: Finance Staff
     permissions: ["property.*.view", "billing.*", "notification.*", "overview.dashboard.view", "search.*", "platform.exports.create"]
+  # ---- Internal BuildingVision (Website PRD §18): di-seed HANYA ke organization is_internal (bvctl seed --internal) ----
+  admin_internal:
+    label: Admin Internal
+    permissions: ["platform.app_downloads.*", "platform.organizations.view", "platform.audit_logs.view", "notification.inbox.view", "search.global.view"]
   tenant_admin:
     label: Tenant Admin
     permissions: ["tenant_app.*", "notification.inbox.view"]
