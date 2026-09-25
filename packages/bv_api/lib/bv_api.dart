@@ -2,6 +2,7 @@
 library;
 
 export 'src/client.dart';
+export 'src/endpoints/announcements_api.dart';
 export 'src/endpoints/attachments_api.dart';
 export 'src/endpoints/auth_api.dart';
 export 'src/endpoints/catalog_api.dart';

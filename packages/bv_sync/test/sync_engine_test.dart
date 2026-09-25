@@ -114,6 +114,13 @@ class FakeSyncServer extends Interceptor {
     }
     if (o.method == 'POST' && path.contains('/attachments/') && path.endsWith('/confirm')) {
       final id = path.split('/')[path.split('/').length - 2];
+      // Meniru server: DisallowUnknownFields + captured_at RFC3339 (wajib offset/Z).
+      final body = o.data as Map<String, dynamic>;
+      const known = {'captured_at', 'gps_lat', 'gps_lng', 'gps_accuracy_m', 'gps_status', 'device_id', 'caption', 'width', 'height'};
+      final captured = body['captured_at'] as String?;
+      if (body.keys.any((k) => !known.contains(k)) || (captured != null && !RegExp(r'(Z|[+-]\d\d:\d\d)$').hasMatch(captured))) {
+        return h.reject(DioException(requestOptions: o, response: _ok(o, {'title': 'Validation failed', 'status': 400, 'code': 'VALIDATION_ERROR'}, 400), type: DioExceptionType.badResponse), true);
+      }
       confirmed.add(id);
       return h.resolve(_ok(o, {
         'id': id, 'object_type': 'task', 'object_id': 't1', 'attachment_type': 'photo', 'content_type': 'image/jpeg',

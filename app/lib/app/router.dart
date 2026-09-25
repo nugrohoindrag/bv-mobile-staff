@@ -8,6 +8,7 @@ import '../features/findings/add_finding_page.dart';
 import '../features/findings/finding_detail_page.dart';
 import '../features/home/home_page.dart';
 import '../features/inbox/inbox_page.dart';
+import '../features/inbox/news_page.dart';
 import '../features/incidents/incident_detail_page.dart';
 import '../features/incidents/report_incident_page.dart';
 import '../features/patrol/patrol_detail_page.dart';
@@ -89,6 +90,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/new/finding', builder: (_, s) => AddFindingPage(objectType: s.uri.queryParameters['object_type']!, objectId: s.uri.queryParameters['object_id']!, locationId: s.uri.queryParameters['location_id'], assetId: s.uri.queryParameters['asset_id'])),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/scan/full', builder: (_, s) => ScanPage(patrolTaskId: s.uri.queryParameters['patrol_task_id'], fullScreen: true)),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/sync-status', builder: (_, _) => const SyncStatusPage()),
+      GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/news', builder: (_, _) => const NewsPage()),
+      GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/news/:id', builder: (_, s) => NewsDetailPage(id: s.pathParameters['id']!)),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/profile/password', builder: (_, _) => const ChangePasswordPage()),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/new/task', builder: (_, _) => const CreateTaskPage()),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: '/incidents/:id', builder: (_, s) => IncidentDetailPage(id: s.pathParameters['id']!)),
@@ -99,9 +102,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
+/// Hanya path tab persis: sub-path (`/scan/full`, `/tasks/:id`, …) adalah halaman root di luar shell
+/// yang boleh dibuka role tanpa tab tersebut (mis. teknisi membuka Scan QR dari menu More).
 ShellTab? _tabForLocation(String loc) {
   for (final e in shellTabDefs.entries) {
-    if (loc == e.value.path || loc.startsWith('${e.value.path}/')) return e.key;
+    if (loc == e.value.path) return e.key;
   }
   return null;
 }

@@ -103,6 +103,7 @@ final cleaningApiProvider = Provider((ref) => CleaningApi(ref.watch(apiClientPro
 final incidentsApiProvider = Provider((ref) => IncidentsApi(ref.watch(apiClientProvider)));
 final findingsApiProvider = Provider((ref) => FindingsApi(ref.watch(apiClientProvider)));
 final notificationsApiProvider = Provider((ref) => NotificationsApi(ref.watch(apiClientProvider)));
+final announcementsApiProvider = Provider((ref) => AnnouncementsApi(ref.watch(apiClientProvider)));
 final catalogApiProvider = Provider((ref) => CatalogApi(ref.watch(apiClientProvider)));
 final inventoryApiProvider = Provider((ref) => InventoryApi(ref.watch(apiClientProvider)));
 final profileApiProvider = Provider((ref) => ProfileApi(ref.watch(apiClientProvider)));

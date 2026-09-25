@@ -326,9 +326,11 @@ class SyncEngine {
           await attachmentsApi.upload(PresignOutput(attachmentId: f.attachmentId!, uploadUrl: f.uploadUrl!, method: 'PUT'), bytes, f.contentType);
           await upd.write(const PendingFilesCompanion(uploadState: Value('uploaded')));
         }
+        // capturedAt dari drift = waktu lokal tanpa offset → wajib UTC (server parse RFC3339).
+        // sha256 sudah dikirim di mutasi attach_photo; confirm server menolak field tak dikenal.
         await attachmentsApi.confirm(
           f.attachmentId!,
-          ConfirmInput(gpsStatus: f.gpsStatus, capturedAt: f.capturedAt, gpsLat: f.gpsLat, gpsLng: f.gpsLng, width: f.width, height: f.height, caption: f.caption, sha256: f.sha256),
+          ConfirmInput(gpsStatus: f.gpsStatus, capturedAt: f.capturedAt?.toUtc(), gpsLat: f.gpsLat, gpsLng: f.gpsLng, width: f.width, height: f.height, caption: f.caption),
         );
         await upd.write(const PendingFilesCompanion(uploadState: Value('confirmed'), lastError: Value(null)));
         await repo.photoStore.delete(f.localPath);

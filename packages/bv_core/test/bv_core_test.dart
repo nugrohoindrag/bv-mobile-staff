@@ -126,6 +126,16 @@ void main() {
       expect(ctx.term('request'), 'Tenant Service Request');
       expect(ctx.profileLabel, 'Hotel');
     });
+
+    test('item checklist photo terjawab lewat foto (tanpa result_*)', () {
+      const photo = ChecklistRunItem(id: 'p', sortOrder: 0, label: 'Foto kondisi unit', itemType: 'photo', isRequired: true, photoRequired: true);
+      expect(photo.isAnswered, isFalse);
+      expect(photo.copyWith(attachmentId: 'att-1').isAnswered, isTrue);
+      expect(photo.copyWith(answeredAt: DateTime.utc(2026, 9, 26)).isAnswered, isTrue);
+      // tipe lain tetap butuh nilai walau answeredAt terisi
+      const text = ChecklistRunItem(id: 't', sortOrder: 1, label: 'Catatan', itemType: 'text');
+      expect(text.copyWith(answeredAt: DateTime.utc(2026, 9, 26)).isAnswered, isFalse);
+    });
   });
 
   group('format', () {

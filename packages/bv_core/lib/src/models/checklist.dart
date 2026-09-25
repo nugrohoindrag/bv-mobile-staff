@@ -73,7 +73,11 @@ abstract class ChecklistRunItem with _$ChecklistRunItem {
   }) = _ChecklistRunItem;
   factory ChecklistRunItem.fromJson(Map<String, dynamic> json) => _$ChecklistRunItemFromJson(json);
 
+  /// Item `photo` tidak punya result_* — dijawab lewat foto (server mengisi attachment_id/answered_at).
   bool get isAnswered =>
-      resultValue != null || resultNumber != null || (resultText != null && resultText!.isNotEmpty);
+      resultValue != null ||
+      resultNumber != null ||
+      (resultText != null && resultText!.isNotEmpty) ||
+      (itemType == 'photo' && (attachmentId != null || answeredAt != null));
   bool get isNotOk => resultValue == 'not_ok' || resultValue == 'no' || outOfRange;
 }

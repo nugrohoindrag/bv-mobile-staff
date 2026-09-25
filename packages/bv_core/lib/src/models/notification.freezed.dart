@@ -312,4 +312,298 @@ as DateTime,
 
 }
 
+
+/// @nodoc
+mixin _$Announcement {
+
+ String get id; String get title; String? get excerpt; String get body; String get importance; String? get propertyName; String? get createdByName; DateTime? get publishedAt; DateTime get createdAt;
+/// Create a copy of Announcement
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AnnouncementCopyWith<Announcement> get copyWith => _$AnnouncementCopyWithImpl<Announcement>(this as Announcement, _$identity);
+
+  /// Serializes this Announcement to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as Announcement;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Announcement&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.excerpt, _this.excerpt) || other.excerpt == _this.excerpt)&&(identical(other.body, _this.body) || other.body == _this.body)&&(identical(other.importance, _this.importance) || other.importance == _this.importance)&&(identical(other.propertyName, _this.propertyName) || other.propertyName == _this.propertyName)&&(identical(other.createdByName, _this.createdByName) || other.createdByName == _this.createdByName)&&(identical(other.publishedAt, _this.publishedAt) || other.publishedAt == _this.publishedAt)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as Announcement;
+  return Object.hash(runtimeType,_this.id,_this.title,_this.excerpt,_this.body,_this.importance,_this.propertyName,_this.createdByName,_this.publishedAt,_this.createdAt);
+}
+
+@override
+String toString() {
+  final _this = this as Announcement;
+  return 'Announcement(id: ${_this.id}, title: ${_this.title}, excerpt: ${_this.excerpt}, body: ${_this.body}, importance: ${_this.importance}, propertyName: ${_this.propertyName}, createdByName: ${_this.createdByName}, publishedAt: ${_this.publishedAt}, createdAt: ${_this.createdAt})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AnnouncementCopyWith<$Res>  {
+  factory $AnnouncementCopyWith(Announcement value, $Res Function(Announcement) _then) = _$AnnouncementCopyWithImpl;
+@useResult
+$Res call({
+ String id, String title, String? excerpt, String body, String importance, String? propertyName, String? createdByName, DateTime? publishedAt, DateTime createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$AnnouncementCopyWithImpl<$Res>
+    implements $AnnouncementCopyWith<$Res> {
+  _$AnnouncementCopyWithImpl(this._self, this._then);
+
+  final Announcement _self;
+  final $Res Function(Announcement) _then;
+
+/// Create a copy of Announcement
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? excerpt = freezed,Object? body = null,Object? importance = null,Object? propertyName = freezed,Object? createdByName = freezed,Object? publishedAt = freezed,Object? createdAt = null,}) {
+  return _then(Announcement(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,excerpt: freezed == excerpt ? _self.excerpt : excerpt // ignore: cast_nullable_to_non_nullable
+as String?,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,importance: null == importance ? _self.importance : importance // ignore: cast_nullable_to_non_nullable
+as String,propertyName: freezed == propertyName ? _self.propertyName : propertyName // ignore: cast_nullable_to_non_nullable
+as String?,createdByName: freezed == createdByName ? _self.createdByName : createdByName // ignore: cast_nullable_to_non_nullable
+as String?,publishedAt: freezed == publishedAt ? _self.publishedAt : publishedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [Announcement].
+extension AnnouncementPatterns on Announcement {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _Announcement value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _Announcement() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _Announcement value)  $default,){
+final _that = this;
+switch (_that) {
+case _Announcement():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _Announcement value)?  $default,){
+final _that = this;
+switch (_that) {
+case _Announcement() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String? excerpt,  String body,  String importance,  String? propertyName,  String? createdByName,  DateTime? publishedAt,  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _Announcement() when $default != null:
+return $default(_that.id,_that.title,_that.excerpt,_that.body,_that.importance,_that.propertyName,_that.createdByName,_that.publishedAt,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String? excerpt,  String body,  String importance,  String? propertyName,  String? createdByName,  DateTime? publishedAt,  DateTime createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _Announcement():
+return $default(_that.id,_that.title,_that.excerpt,_that.body,_that.importance,_that.propertyName,_that.createdByName,_that.publishedAt,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String? excerpt,  String body,  String importance,  String? propertyName,  String? createdByName,  DateTime? publishedAt,  DateTime createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _Announcement() when $default != null:
+return $default(_that.id,_that.title,_that.excerpt,_that.body,_that.importance,_that.propertyName,_that.createdByName,_that.publishedAt,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _Announcement extends Announcement {
+  const _Announcement({required this.id, required this.title, this.excerpt, this.body = '', this.importance = 'normal', this.propertyName, this.createdByName, this.publishedAt, required this.createdAt}): super._();
+  factory _Announcement.fromJson(Map<String, dynamic> json) => _$AnnouncementFromJson(json);
+
+@override final  String id;
+@override final  String title;
+@override final  String? excerpt;
+@override@JsonKey() final  String body;
+@override@JsonKey() final  String importance;
+@override final  String? propertyName;
+@override final  String? createdByName;
+@override final  DateTime? publishedAt;
+@override final  DateTime createdAt;
+
+/// Create a copy of Announcement
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$AnnouncementCopyWith<_Announcement> get copyWith => __$AnnouncementCopyWithImpl<_Announcement>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$AnnouncementToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Announcement&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.excerpt, excerpt) || other.excerpt == excerpt)&&(identical(other.body, body) || other.body == body)&&(identical(other.importance, importance) || other.importance == importance)&&(identical(other.propertyName, propertyName) || other.propertyName == propertyName)&&(identical(other.createdByName, createdByName) || other.createdByName == createdByName)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,title,excerpt,body,importance,propertyName,createdByName,publishedAt,createdAt);
+}
+
+@override
+String toString() {
+    return 'Announcement(id: $id, title: $title, excerpt: $excerpt, body: $body, importance: $importance, propertyName: $propertyName, createdByName: $createdByName, publishedAt: $publishedAt, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$AnnouncementCopyWith<$Res> implements $AnnouncementCopyWith<$Res> {
+  factory _$AnnouncementCopyWith(_Announcement value, $Res Function(_Announcement) _then) = __$AnnouncementCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String title, String? excerpt, String body, String importance, String? propertyName, String? createdByName, DateTime? publishedAt, DateTime createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$AnnouncementCopyWithImpl<$Res>
+    implements _$AnnouncementCopyWith<$Res> {
+  __$AnnouncementCopyWithImpl(this._self, this._then);
+
+  final _Announcement _self;
+  final $Res Function(_Announcement) _then;
+
+/// Create a copy of Announcement
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? excerpt = freezed,Object? body = null,Object? importance = null,Object? propertyName = freezed,Object? createdByName = freezed,Object? publishedAt = freezed,Object? createdAt = null,}) {
+  return _then(_Announcement(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,excerpt: freezed == excerpt ? _self.excerpt : excerpt // ignore: cast_nullable_to_non_nullable
+as String?,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,importance: null == importance ? _self.importance : importance // ignore: cast_nullable_to_non_nullable
+as String,propertyName: freezed == propertyName ? _self.propertyName : propertyName // ignore: cast_nullable_to_non_nullable
+as String?,createdByName: freezed == createdByName ? _self.createdByName : createdByName // ignore: cast_nullable_to_non_nullable
+as String?,publishedAt: freezed == publishedAt ? _self.publishedAt : publishedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,
+  ));
+}
+
+
+}
+
 // dart format on

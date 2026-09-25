@@ -198,7 +198,7 @@ class HomePage extends ConsumerWidget {
         ),
         // Tenant Relation: WO yang bersumber dari service request tenant (source_type=service_request)
         QuickMenuItem(label: 'Tenant Relation', icon: Icons.handshake_outlined, color: const Color(0xFFFFCA28), onTap: () => context.push('/schedule/tenant')),
-        QuickMenuItem(label: 'News', icon: Icons.newspaper_outlined, color: const Color(0xFF26A69A), onTap: () => context.go('/inbox')),
+        QuickMenuItem(label: 'News', icon: Icons.newspaper_outlined, color: const Color(0xFF26A69A), onTap: () => context.push('/news')),
         more,
       ],
       ShellRole.securityOfficer => [
@@ -207,7 +207,7 @@ class HomePage extends ConsumerWidget {
         QuickMenuItem(label: 'Scan QR', icon: Icons.qr_code_scanner, color: const Color(0xFF26A69A), onTap: () => context.push('/scan/full')),
         // Panic: lapor insiden severity kritis (kategori keamanan) — form terisi awal, konfirmasi sebelum kirim
         QuickMenuItem(label: 'Panic Button', icon: Icons.warning_amber_rounded, color: const Color(0xFFE53935), onTap: () => context.push('/new/incident?panic=1')),
-        QuickMenuItem(label: 'News', icon: Icons.newspaper_outlined, color: const Color(0xFF26A69A), onTap: () => context.go('/inbox')),
+        QuickMenuItem(label: 'News', icon: Icons.newspaper_outlined, color: const Color(0xFF26A69A), onTap: () => context.push('/news')),
         more,
       ],
       ShellRole.housekeepingStaff => [
@@ -215,7 +215,7 @@ class HomePage extends ConsumerWidget {
         QuickMenuItem(label: 'Checklist', icon: Icons.fact_check_outlined, color: const Color(0xFF5C6BC0), onTap: () => context.go('/checklist')),
         QuickMenuItem(label: 'Report', icon: Icons.flag_outlined, color: const Color(0xFFFFA726), onTap: () => context.go('/report')),
         QuickMenuItem(label: 'Scan Area', icon: Icons.qr_code_scanner, color: const Color(0xFF26A69A), onTap: () => context.push('/scan/full')),
-        QuickMenuItem(label: 'News', icon: Icons.newspaper_outlined, color: const Color(0xFF26A69A), onTap: () => context.go('/inbox')),
+        QuickMenuItem(label: 'News', icon: Icons.newspaper_outlined, color: const Color(0xFF26A69A), onTap: () => context.push('/news')),
         more,
       ],
       ShellRole.supervisor => [
